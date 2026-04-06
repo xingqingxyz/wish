@@ -1,6 +1,6 @@
 using namespace System.Management.Automation.Language
 
-Register-ArgumentCompleter -Native -CommandName sudo -ScriptBlock {
+Register-ArgumentCompleter -Native -CommandName sudo, x -ScriptBlock {
   param ([string]$wordToComplete, [CommandAst]$commandAst, [int]$cursorPosition)
   for ($i = 1; $i -lt $commandAst.CommandElements.Count; $i++) {
     if (!$commandAst.CommandElements[$i].ToString().StartsWith('-')) {
@@ -10,18 +10,19 @@ Register-ArgumentCompleter -Native -CommandName sudo -ScriptBlock {
   switch ($commandAst.CommandElements.Count - $i) {
     { $_ -le 1 } {
       if ($wordToComplete.StartsWith('-')) {
-        @(switch ($true) {
-            $IsWindows {
+        switch ([System.IO.Path]::GetFileNameWithoutExtension($commandAst.GetCommandName())) {
+          'sudo' {
+            if ($IsWindows) {
+              '-E', '--preserve-env', '-N', '--new-window', '--disable-input', '--inline', '-D', '--chdir=', '-h', '--help', '-V', '--version'
               break
             }
-            $IsMacOS {
-              break
-            }
-            $IsLinux {
+            elseif ($IsLinux) {
               '-A', '--askpass', '-b', '--background', '-B', '--bell', '-C', '--close-from=', '-D', '--chdir=', '-E', '--preserve-env', '--preserve-env=', '-e', '--edit', '-g', '--group=', '-H', '--set-home', '-h', '--help', '-h', '--host=', '-i', '--login', '-K', '--remove-timestamp', '-k', '--reset-timestamp', '-l', '--list', '-n', '--non-interactive', '-P', '--preserve-groups', '-p', '--prompt=#', '-R', '--chroot=/root', '-r', '--role=', '-S', '--stdin', '-s', '--shell', '-t', '--type=', '-T', '--command-timeout=12000', '-U', '--other-user=', '-u', '--user=', '-V', '--version', '-v', '--validate'
               break
             }
-          }).Where{ $_ -like "$wordToComplete*" }
+            break
+          }
+        }
         break
       }
       (Get-Command $wordToComplete* -Type Application).Name | Sort-Object -Unique
