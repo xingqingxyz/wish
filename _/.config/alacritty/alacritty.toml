@@ -68,7 +68,5 @@ color = "#111111"
 duration = 216
 
 [general]
-#region import
 import = ["~/p/wish/alacritty-theme/themes/tokyo_night_enhanced.toml"]
-#endregion
 live_config_reload = true

@@ -4,8 +4,7 @@ while [ $# -ne 0 ]; do
   case "$1" in
     -p | --prompt)
       args+=('--permission-mode=auto')
-      exec -a claude bun -b ~/.bun/bin/claude "${args[@]}" | glow
-      exit
+      exec -a claude glow < <(bun -b ~/.bun/bin/claude "${args[@]}")
       ;;
     *) ;;
   esac

@@ -1,1 +1,1 @@
-../../../ps1/profile.ps1
+../../shell/profile.ps1

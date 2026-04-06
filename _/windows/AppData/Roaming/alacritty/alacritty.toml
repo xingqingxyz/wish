@@ -1,1 +1,66 @@
-../../../../.config/alacritty/alacritty.toml
+[cursor.style]
+shape = "Beam"
+blinking = "On"
+
+[[hints.enabled]]
+command = { program = "cmd", args = ["/d", "/c", "start", ""] }
+hyperlinks = true
+post_processing = true
+persist = false
+mouse.enabled = true
+binding = { key = "O", mods = "Control|Shift" }
+regex = "(ipfs:|ipns:|magnet:|mailto:|gemini://|go-pher://|https://|http://|news:|file:|git://|ssh:|ftp://)[^\u0000-\u001F\u007F-\u009F<>\"\\s{-}\\^⟨⟩`\\\\]+|(/[^\\s/]+)+"
+
+[[keyboard.bindings]]
+key = "N"
+mods = "Control|Shift"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
+key = "+"
+mods = "Alt|Shift"
+command = { program = "alacritty", args = [
+  "--hold",
+  "-T",
+  "bash",
+  "-e",
+  "bash",
+] }
+
+[[keyboard.bindings]]
+key = "F11"
+action = "ToggleFullscreen"
+
+[[mouse.bindings]]
+mouse = "Right"
+action = "Paste"
+
+[mouse]
+hide_when_typing = true
+
+[selection]
+save_to_clipboard = true
+
+[terminal]
+shell = "pwsh"
+osc52 = "CopyPaste"
+
+[font]
+normal.family = "Cascadia Mono"
+size = 12
+
+[window]
+resize_increments = true
+
+[window.dimensions]
+columns = 120
+lines = 35
+
+[bell]
+animation = "EaseOut"
+color = "#111111"
+duration = 216
+
+[general]
+import = ["alacritty-theme/themes/tokyo_night_enhanced.toml"]
+live_config_reload = true

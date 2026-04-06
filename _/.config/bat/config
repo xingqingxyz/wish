@@ -1,6 +1,9 @@
---map-syntax ".*rc:json"
---map-syntax "*.kdl:gradle"
---map-syntax "*.slnx:XML"
---map-syntax "config.ghostty:ini"
---map-syntax "pip.conf:ini"
+--map-syntax=.*rc:json
+--map-syntax=*.kdl:gradle
+--map-syntax=*.slnx:XML
+--map-syntax=config.ghostty:ini
+--map-syntax=pip.conf:ini
 --set-terminal-title
+--theme=auto
+--theme-dark="Catppuccin Frappe"
+--theme-light="GitHub"
