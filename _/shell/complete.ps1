@@ -31,7 +31,7 @@ function Register-ArgumentCompleter {
 
 function Get-ArgumentCompleter ([string]$CommandName) {
   if (!$_completionFuncMap.Contains($CommandName) -and
-    (Test-Path -LiteralPath "$PSScriptRoot/completions/$CommandName.ps1")) {
+    (Test-Path -LiteralPath $PSScriptRoot/completions/$CommandName.ps1)) {
     & $PSScriptRoot/completions/$CommandName.ps1
   }
   $_completionFuncMap[$CommandName] ?? { param ([string]$wordToComplete) @('--help', '--version').Where{ $_.StartsWith($wordToComplete) } }

@@ -88,7 +88,7 @@ Set-PSReadLineKeyHandler -Chord Alt+C -Description 'Fzf select parent directorie
   [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
 }
 Set-PSReadLineKeyHandler -Chord Alt+S -Description 'Fzf select stared repo name to insert' -ScriptBlock {
-  $repo = Get-Content -LiteralPath "$PSScriptRoot/../data/stars.txt" | fzf --scheme=path
+  $repo = Get-Content -LiteralPath $env:WISH_ROOT/scripts/data/stars.txt | fzf --scheme=path
   if (!$repo) {
     return
   }

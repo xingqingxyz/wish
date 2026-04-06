@@ -4,7 +4,7 @@
 $root = [System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $PSCommandPath).ResolvedTarget)
 # PSES
 if (Get-Module PowerShellEditorServices.Commands -ea Ignore) {
-  . $root/../scripts/Initialize-PSES.ps1
+  . $root/onEnterPSES.ps1
 }
 # load
 . $root/complete.ps1
@@ -12,7 +12,7 @@ if (Get-Module PowerShellEditorServices.Commands -ea Ignore) {
 . $root/z.ps1
 Remove-Variable root
 # the wish shell
-Import-Module LSColors, Profile -ea Ignore
+Import-Module LSColors, Profile -ea SilentlyContinue
 # excutable alias
 Set-Variable -Option ReadOnly -Force _executableAliasMap @{
   grep = 'grep', '--color=auto'
@@ -35,7 +35,7 @@ if ($IsWindows) {
       return Write-Error "alias not set $cmd"
     }
     # flat iterator args for native passing
-    $cmd, $ags = $_executableAliasMap[$cmd] + $args.Where{ $null -ne $_ }
+    $cmd, $ags = $_executableAliasMap[$cmd] + $args.ForEach{ $_.Where{ $null -ne $_ } }
     $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
     if ($MyInvocation.ExpectingInput) {
       Write-Debug "| $cmd $ags"
@@ -47,10 +47,10 @@ if ($IsWindows) {
     }
   }
   # winget command-not-found
-  # note: stdout and stderr are ignored in this scriptblock
   $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     [System.Management.Automation.CommandLookupEventArgs]$e = $args[1]
     if ($e.CommandOrigin -ceq 'Runspace' -and !$e.CommandName.StartsWith('get-')) {
+      $e.StopSearch = $true
       $lines = winget search -s winget -n 1 --no-vt (Split-Path -LeafBase $e.CommandName)
       if (!$?) {
         return
@@ -59,7 +59,8 @@ if ($IsWindows) {
       if (!$id) {
         throw "cannot find winget package ($($lines[2]))"
       }
-      winget show -s winget --id $id
+      # note: stdout and stderr are ignored
+      winget show -s winget --id $id | Out-Host
       if (!$?) {
         throw "cannot show winget package ($id)"
       }
@@ -67,10 +68,11 @@ if ($IsWindows) {
       if ($ok -eq 'y') {
         sudo winget install -s winget --accept-package-agreements --no-vt --id $id
         if ($?) {
-          $e.CommandScriptBlock = [scriptblock]::Create('Update-SessionEnvironment; & ' + $e.CommandName)
-          $e.StopSearch = $true
+          $e.CommandScriptBlock = [scriptblock]::Create("Update-SessionEnvironment; if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")
+          return
         }
       }
+      $e.CommandScriptBlock = {}
     }
   }
   return
@@ -101,7 +103,7 @@ Set-Item -LiteralPath $_executableAliasMap.Keys.ForEach{ "Function:$_" } {
     return Write-Error "alias not set $cmd"
   }
   # flat iterator args for native passing
-  $ags = , '--' + $_executableAliasMap[$cmd] + $args.Where{ $null -ne $_ }
+  $ags = , '--' + $_executableAliasMap[$cmd] + $args.ForEach{ $_.Where{ $null -ne $_ } }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| /usr/bin/env $ags"
     $input | /usr/bin/env $ags
@@ -112,54 +114,20 @@ Set-Item -LiteralPath $_executableAliasMap.Keys.ForEach{ "Function:$_" } {
   }
 }
 # command-not-found
-$ExecutionContext.InvokeCommand.CommandNotFoundAction =
-switch ((Get-Command apt, dnf -CommandType Application -TotalCount 1 -ea Ignore).Name) {
-  apt {
-    {
-      [System.Management.Automation.CommandLookupEventArgs]$e = $args[1]
-      if ($e.CommandOrigin -ceq 'Runspace' -and !$e.CommandName.StartsWith('get-')) {
-        [string]$name = @(apt-file search -Fil /usr/bin/$($e.CommandName) 2>$null)[0]
-        if (!$name) {
-          return
-        }
-        # note: stdout and stderr are ignored unless sudo
-        apt info $name | Out-Host
-        $ok = Read-Host "Install $name`? (Y/N)"
-        if ($ok -ne 'y') {
-          return
-        }
-        # disable unstable interface warning
-        sudo apt install -y $name 2>$null
-        if ($?) {
-          $e.CommandScriptBlock = [scriptblock]::Create("if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")
-          $e.StopSearch = $true
-        }
-      }
+[string]$scriptText = {
+  [System.Management.Automation.CommandLookupEventArgs]$e = $args[1]
+  if ($e.CommandOrigin -ceq 'Runspace' -and !$e.CommandName.StartsWith('get-')) {
+    $e.StopSearch = $true
+    $name = @(%search% /usr/bin/$($e.CommandName) 2>$null)[0]
+    if (!$name) {
+      return
     }
-    break
-  }
-  dnf {
-    {
-      [System.Management.Automation.CommandLookupEventArgs]$e = $args[1]
-      if ($e.CommandOrigin -ceq 'Runspace' -and !$e.CommandName.StartsWith('get-')) {
-        [string]$name = @(dnf repoquery --file=/usr/bin/$($e.CommandName) --arch=$(arch) 2>$null)[0]
-        if (!$name) {
-          return
-        }
-        # note: stdout and stderr are ignored unless sudo
-        dnf info $name | Out-Host
-        $ok = Read-Host "Install $name`? (Y/N)"
-        if ($ok -ne 'y') {
-          return
-        }
-        sudo dnf install -y $name
-        if ($?) {
-          $e.CommandScriptBlock = [scriptblock]::Create("if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")
-          $e.StopSearch = $true
-        }
-      }
-    }
-    break
+    # stdout and stderr are ignored unless sudo
+    %cmd% info $name | Out-Host
+    sudo %cmd% install $name 2>$null
+    $e.CommandScriptBlock = $? ? [scriptblock]::Create("if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }") : {}
   }
 }
+$cmd = (Get-Command apt, dnf -CommandType Application -TotalCount 1 -ea Ignore)[0].Name
+$ExecutionContext.InvokeCommand.CommandNotFoundAction = [scriptblock]$scriptText.Replace('%search%', ($cmd -ceq 'apt' ? 'apt-file search -Fil' : "dnf repoquery --arch=$(arch) --file")).Replace('%cmd%', $cmd)
 #endregion
