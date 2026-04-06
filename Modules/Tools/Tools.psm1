@@ -106,34 +106,37 @@ function Search-Web {
   [Alias('sw')]
   param (
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('archwiki', 'baidu', 'bing', 'bing-en', 'cargo', 'docker', 'dotnetapi', 'flutter', 'go', 'google', 'jsdelivr', 'jsr', 'maven', 'npm', 'nuget', 'psgallery', 'pypi', 'vcpkg')]
+    [ValidateSet('archwiki', 'baidu', 'bing', 'bing-en', 'cargo', 'docker', 'dotnetapi', 'flutter', 'go', 'google', 'jsdelivr', 'jsr', 'maven', 'npm', 'nuget', 'psgallery', 'psm1', 'pypi', 'vcpkg')]
     [string]
     $Category,
-    [Parameter(Mandatory, Position = 1)]
+    [Parameter(Mandatory, Position = 1, ValueFromRemainingArguments)]
     [ValidateNotNullOrEmpty()]
-    [string]
+    [string[]]
     $Name
   )
-  switch ($Category) {
-    archwiki { Start-Process "https://wiki.archlinux.org/index.php?search=$Name"; break }
-    baidu { Start-Process "https://www.baidu.com/s?wd=$Name"; break }
-    bing { Start-Process "https://www.bing.com/search?q=$Name"; break }
-    bing-en { Start-Process "https://www.bing.com/search?ensearch=1&q=$Name"; break }
-    cargo { Start-Process "https://crates.io/search?q=$Name"; break }
-    docker { Start-Process "https://hub.docker.com/search?q=$Name"; break }
-    dotnetapi { Start-Process "https://learn.microsoft.com/zh-cn/dotnet/api/?term=$Name"; break }
-    flutter { Start-Process "https://pub-web.flutter-io.cn/packages?q=$Name"; break }
-    go { Start-Process "https://pkg.go.dev/search?q=$Name"; break }
-    google { Start-Process "https://www.google.com/search?q=$Name"; break }
-    jsdelivr { Start-Process "https://www.jsdelivr.com/?query=$Name"; break }
-    jsr { Start-Process "https://jsr.io/packages?search=$Name"; break }
-    maven { Start-Process "https://central.sonatype.com/search?q=$Name"; break }
-    npm { Start-Process "https://www.npmjs.com/search?q=$Name"; break }
-    nuget { Start-Process "https://www.nuget.org/packages?q=$Name"; break }
-    psgallery { Start-Process "https://www.powershellgallery.com/packages?q=$Name"; break }
-    pypi { Start-Process "https://pypi.org/search/?q=$Name"; break }
-    vcpkg { Start-Process "https://vcpkg.io/en/packages?query=$Name"; break }
+  $prefix = switch ($Category) {
+    archwiki { 'https://wiki.archlinux.org/index.php?search='; break }
+    baidu { 'https://www.baidu.com/s?wd='; break }
+    bing { 'https://www.bing.com/search?q='; break }
+    bing-en { 'https://www.bing.com/search?ensearch=1&q='; break }
+    cargo { 'https://crates.io/search?q='; break }
+    docker { 'https://hub.docker.com/search?q='; break }
+    dotnetapi { 'https://learn.microsoft.com/zh-cn/dotnet/api/?term='; break }
+    flutter { 'https://pub-web.flutter-io.cn/packages?q='; break }
+    go { 'https://pkg.go.dev/search?q='; break }
+    google { 'https://www.google.com/search?q='; break }
+    jsdelivr { 'https://www.jsdelivr.com/?query='; break }
+    jsr { 'https://jsr.io/packages?search='; break }
+    maven { 'https://central.sonatype.com/search?q='; break }
+    npm { 'https://www.npmjs.com/search?q='; break }
+    nuget { 'https://www.nuget.org/packages?q='; break }
+    psgallery { 'https://www.powershellgallery.com/packages?q='; break }
+    psm1 { 'https://learn.microsoft.com/zh-cn/powershell/module/?term='; break }
+    pypi { 'https://pypi.org/search/?q='; break }
+    vcpkg { 'https://vcpkg.io/en/packages?query='; break }
+    # no default
   }
+  Start-Process "$prefix$Name"
 }
 
 function Set-SystemProxy {
@@ -219,7 +222,7 @@ function Get-EnvironmentVariable {
   if ($MyInvocation.ExpectingInput) {
     $ArgumentList += $input
   }
-  Convert-Path $ArgumentList.ForEach{ "Env:$_" } | ForEach-Object {
+  $ArgumentList.ForEach{ $_.Contains('*') ? (Convert-Path Env:$_ -ea Ignore) : $_ } | ForEach-Object {
     [System.Environment]::GetEnvironmentVariable($_, $Scope)
   }
 }
@@ -234,9 +237,9 @@ function Set-EnvironmentVariable {
           [string]$ParameterName,
           [string]$WordToComplete
         )
-        (Get-Item Env:$wordToComplete* -ea Ignore).Name.ForEach{ "$_=" }
+        (Convert-Path Env:$WordToComplete*).ForEach{ "`"$_=" }
       })]
-    [Parameter(Position = 0, ValueFromRemainingArguments)]
+    [Parameter(Mandatory, Position = 0, ValueFromRemainingArguments)]
     [ValidateNotNullOrEmpty()]
     [string[]]
     $ArgumentList,
@@ -244,86 +247,68 @@ function Set-EnvironmentVariable {
     [System.EnvironmentVariableTarget]
     $Scope = 'Process',
     [Parameter()]
-    [string]
-    $RegionName = "${Scope}Env",
+    [switch]
+    $PassThru,
     [Parameter(ValueFromPipeline)]
     [System.Object]
     $InputObject
   )
-  if ($MyInvocation.ExpectingInput) {
-    $PSBoundParameters.ArgumentList = $ArgumentList += $input
-  }
   $envMap = [Dictionary[string, string]]::new()
-  foreach ($arg in $ArgumentList) {
-    if ($arg -cnotmatch '^(\w+)(?:(=|\+=)(.+)?)?$') {
-      return Write-Error "unknown format $arg"
-    }
-    $key = $Matches[1]
-    $value = switch ($Matches[2]) {
-      '=' { $Matches[3]; break }
-      '+=' { [System.Environment]::GetEnvironmentVariable($key, $Scope) + $Matches[3]; break }
-      default { [System.Environment]::GetEnvironmentVariable($key) ?? '1'; break }
-    }
+  $ArgumentList.ForEach{
+    # note: VAR= sets to '' but VAR sets to $null (delete)
+    $key, $value = $_.Split('=')
     $envMap[$key] = $value
-    if ($IsWindows -and ($key -eq 'Path' -or $key -eq 'PSModulePath')) {
-      if ($Scope -ceq 'User') {
-        $value = [System.Environment]::GetEnvironmentVariable($key, 'Machine') + $value
-      }
-      elseif ($Scope -ceq 'Machine') {
-        $value += [System.Environment]::GetEnvironmentVariable($key, 'User')
-      }
-    }
     Set-Item -LiteralPath Env:$key $value
   }
-  Write-Debug "setting env $($envMap.GetEnumerator())"
   if ($Scope -ceq 'Process') {
+    if ($PassThru) {
+      return $envMap
+    }
     return
   }
   elseif ($Scope -ceq 'Machine' -and !(Test-Administrator)) {
-    return Invoke-Sudo Set-EnvironmentVariable @PSBoundParameters
+    return Write-Error 'need admin permission to set machine env'
   }
   if ($IsWindows) {
     # reg faster than [Environment]
     $regPath = $Scope -ceq 'Machine' ? 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' : 'HKCU:\Environment\'
     $envMap.GetEnumerator().ForEach{
-      if ($_.Value) {
-        Set-ItemProperty -LiteralPath $regPath $_.Key $_.Value
+      if ($null -eq $_.Value) {
+        Write-Debug "remove $($_.Key) on $regPath"
+        Remove-ItemProperty -LiteralPath $regPath $_.Key
       }
       else {
-        Write-Debug "remove $($_.Key) on $regPath"
-        Remove-ItemProperty -LiteralPath $regPath $_.Key -ea Ignore
+        Set-ItemProperty -LiteralPath $regPath $_.Key $_.Value
       }
     }
   }
   elseif ($IsMacOS) {
-    $envMap.GetEnumerator().ForEach{
-      if ($_.Value) {
-        [System.Environment]::SetEnvironmentVariable($_.Key, $_.Value, $Scope)
-      }
-      else {
-        throw [System.NotImplementedException]::new()
-      }
-    }
+    throw [System.NotImplementedException]::new()
   }
   elseif ($IsLinux) {
-    $lines = $envMap.GetEnumerator().ForEach{
-      if ($_.Value) {
-        "export '$($_.Key)=$($_.Value.Replace("'", "'\''"))'"
+    $envFilePath = $Scope -ceq 'Machine' ? '/etc/profile.d/sh.local' : "$HOME/.env"
+    $savedEnvironment = $envMap
+    $envMap = [Dictionary[string, string]]::new()
+    Get-Region "${Scope}Env" $envFilePath | ForEach-Object {
+      $key, $value = $_.Split('=', 2)
+      $envMap[$key] = $value
+    }
+    $savedEnvironment.GetEnumerator().ForEach{
+      if ($null -eq $_.Value) {
+        $envMap.Remove($_.Key)
+      }
+      else {
+        $envMap[$_.Key] = $_.Value
       }
     }
-    switch ($Scope) {
-      'User' {
-        Set-Region $RegionName $lines ~/.bash_profile -Inplace
-        break
-      }
-      'Machine' {
-        Set-Region $RegionName $lines /etc/profile.d/sh.local -Inplace
-        break
-      }
-    }
+    $lines = $envMap.GetEnumerator().ForEach{ $_.Key + '=' + $_.Value }
+    Set-Region "${Scope}Env" $lines $envFilePath -Inplace
   }
   else {
     throw [System.NotImplementedException]::new()
+  }
+  if ($PassThru) {
+    $envMap
   }
 }
 
@@ -359,57 +344,13 @@ function Set-EnvironmentVariablePath {
     [switch]
     $PassThru
   )
-  $value = [System.Environment]::GetEnvironmentVariable($Name, $Scope)
-  $sep = [System.IO.Path]::PathSeparator
-  $value = $Prepend + $value.Split($sep).Where{ $_ -and !${Delete}?.Contains($_) } + $Append | Select-Object -Unique | Join-String -Separator $sep -OutputSuffix $sep
-  [System.Environment]::SetEnvironmentVariable($Name, $value, $Scope)
+  $value = ($Prepend +
+    [System.Environment]::GetEnvironmentVariable($Name, $Scope).Split(
+      [System.IO.Path]::PathSeparator).Where{ $_ -and !${Delete}?.Contains($_) } +
+    $Append | Select-Object -Unique) -join [System.IO.Path]::PathSeparator
+  Set-EnvironmentVariable -Scope $Scope $Name=$value
   if ($PassThru) {
     $value
-  }
-}
-
-function Import-EnvironmentVariable {
-  [CmdletBinding()]
-  [Alias('ipev')]
-  param (
-    [Parameter(Position = 0)]
-    [SupportsWildcards()]
-    [ValidateNotNullOrEmpty()]
-    [string[]]
-    $Path = '.env'
-  )
-  $envMap = [Dictionary[string, string]]::new()
-  Convert-Path $Path | ForEach-Object {
-    switch -Regex -File $_ {
-      '^\s*(?:#|$)' { continue }
-      '^\s*[a-z_]\w*=' {
-        $key, $value = $Matches[0].Split('=', 2)
-        $key = $key.TrimStart()
-        $value = if ($value.StartsWith('"')) {
-          if ($value -cmatch '^(?<=").*(?=(?<!\\)")') {
-            $value = $Matches[0]
-          }
-          else {
-            $value = $value.Substring(1)
-            switch ($switch) {
-              '^.*(?=(?<!\\)")' { $value += "`n" + $Matches[0]; break }
-              default { $value += "`n" + $_; continue }
-            }
-          }
-          $value.Replace('\"', '"')
-        }
-        else {
-          $value.TrimEnd()
-        }
-        $envMap[$key] = $value
-        continue
-      }
-      default { Write-Debug "ignore $_"; continue }
-    }
-    Write-Debug "sourced env file $_"
-  }
-  $envMap.GetEnumerator().ForEach{
-    [System.Environment]::SetEnvironmentVariable($_.Key, $_.Value)
   }
 }
 
@@ -419,25 +360,26 @@ function Update-SessionEnvironment {
   Updates environment variables from registry to current powershell session.
   #>
   if (!$IsWindows) {
-    throw 'only supports windows'
+    throw [System.NotImplementedException]::new()
   }
   $envMap = [Dictionary[string, string]]::new()
-  [Microsoft.Win32.RegistryKey]$reg = Get-Item -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\'
-  $reg.GetValueNames().ForEach{
-    $envMap[$_] = $reg.GetValue($_)
+  [Microsoft.Win32.RegistryKey]$regEnv = Get-Item -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\'
+  $regEnv.GetValueNames().ForEach{
+    $envMap[$_] = $regEnv.GetValue($_)
   }
   $machinePath = $envMap['Path']
-  $reg = Get-Item -LiteralPath 'HKCU:\Environment\'
-  $reg.GetValueNames().ForEach{
-    $envMap[$_] = $reg.GetValue($_)
+  $regEnv = Get-Item -LiteralPath 'HKCU:\Environment\'
+  $regEnv.GetValueNames().ForEach{
+    $envMap[$_] = $regEnv.GetValue($_)
   }
   # try to find the prepended or appended paths e.g. $PSHOME or venv paths
   $path = [System.Environment]::GetEnvironmentVariable('Path', 'User')
-  $idx = $env:Path.LastIndexOf($path)
+  $idx = $env:Path.LastIndexOf($path + ';')
   $path = $idx -lt 0 ? '' : $env:Path.Substring($idx + $path.Length)
-  $path = $env:Path.Substring(0, [System.Math]::Max(0, $env:Path.IndexOf([System.Environment]::GetEnvironmentVariable('Path', 'Machine')))) + $machinePath + ';' + $envMap['Path'] + $path
-  $envMap['Path'] = $path.Split(';').Where{ $_ } | Join-String -Separator ';' -OutputSuffix ';'
-  # keep common process vars (non-null only)
+  $idx = $env:Path.IndexOf(';' + [System.Environment]::GetEnvironmentVariable('Path', 'Machine')) + 1
+  $path = $env:Path.Substring(0, $idx) + $machinePath + ';' + $envMap['Path'] + $path
+  $envMap['Path'] = $path.Split(';').Where{ $_ } -join ';'
+  # keep some common process vars
   $envMap['PSModulePath'] = $env:PSModulePath
   $envMap.GetEnumerator().ForEach{
     [System.Environment]::SetEnvironmentVariable($_.Key, $_.Value)
@@ -449,7 +391,7 @@ function Use-DevelopmentEnvironment {
   [Alias('ude')]
   param (
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('AndroidStudio', 'VisualStudio')]
+    [ValidateSet('AndroidStudio', 'GitBash', 'VisualStudio')]
     [string]
     $Name
   )
@@ -466,14 +408,23 @@ function Use-DevelopmentEnvironment {
       ) -join [System.IO.Path]::PathSeparator
       break
     }
-    VisualStudio {
-      if ($IsWindows) {
-        Import-Module 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
-        Enter-VsDevShell 1da1aa76 -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
-      }
-      else {
+    GitBash {
+      if (!$IsWindows) {
         throw [System.NotImplementedException]::new()
       }
+      $env:PATH = @(
+        $env:PATH
+        'C:\Program Files\Git\usr\bin'
+        'C:\Program Files\Git\mingw64\bin'
+      ) -join [System.IO.Path]::PathSeparator
+      break
+    }
+    VisualStudio {
+      if (!$IsWindows) {
+        throw [System.NotImplementedException]::new()
+      }
+      Import-Module 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+      Enter-VsDevShell 1da1aa76 -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
       break
     }
   }
@@ -530,24 +481,33 @@ function icat {
     [System.Object]
     $InputObject
   )
-  $supportsKitty = $env:TERM -ceq 'xterm-ghostty' -or $env:TERM -ceq 'xterm-kitty'
+  $onlyKitty = $env:TERM -ceq 'xterm-ghostty' -or $env:TERM -ceq 'xterm-kitty'
   if ($MyInvocation.ExpectingInput) {
-    if ($supportsKitty) {
-      return $input | kitten icat
+    if ($onlyKitty) {
+      $input | kitten icat
     }
-    return $input | magick -density 3000 -background transparent "${Format}:-" -resize "${Size}x" -define sixel:diffuse=true @ArgumentList sixel:- 2>$null
+    elseif (Get-Command chafa -Type Application -TotalCount 1 -ea Ignore) {
+      $input | chafa -f sixels
+    }
+    else {
+      $input | magick -density 3000 -background transparent "${Format}:-" -resize "${Size}x" -define sixel:diffuse=true @ArgumentList sixel:- 2>$null
+    }
+    return
   }
   if ($Path) {
     $LiteralPath = Convert-Path $Path -Force
   }
-  $LiteralPath.ForEach{
-    if ($supportsKitty) {
-      kitten icat `-- $_
-    }
-    else {
+  if ($onlyKitty) {
+    kitten icat $LiteralPath
+  }
+  elseif (Get-Command chafa -Type Application -TotalCount 1 -ea Ignore) {
+    chafa $LiteralPath
+  }
+  else {
+    $LiteralPath.ForEach{
       magick -density 3000 -background transparent $_ -resize "${Size}x" -define sixel:diffuse=true @ArgumentList sixel:- 2>$null
+      magick identify $_
     }
-    magick identify `-- $_
   }
 }
 #endregion

@@ -251,7 +251,8 @@ raspi:
 rustup:
   - stable
   - nightly
-rustup-components: []
+rustup-components:
+  - clippy
 rustup-targets:
   - wasm32-unknown-unknown
 ubuntu:
@@ -317,7 +318,7 @@ winget:
   - astral-sh.ty
   - astral-sh.uv
   - BurntSushi.ripgrep.MSVC
-  - charmbracelet.glow
+  - dandavison.delta
   - DenoLand.Deno
   - FiloSottile.mkcert
   - Git.Git
@@ -326,12 +327,15 @@ winget:
   - Google.AndroidStudio
   - gstreamerproject.gstreamer
   - Gyan.FFmpeg
+  - hpjansson.Chafa
   - ImageMagick.Q16-HDRI
   - JohnMacFarlane.Pandoc
+  - josephburnett.jd
   - jqlang.jq
   - junegunn.fzf
   - Kingsoft.WPSOffice.CN
   - koalaman.shellcheck
+  - LLVM.LLVM
   - LocalSend.LocalSend
   - Meta.Zstandard
   - Microsoft.Edge
@@ -348,13 +352,15 @@ winget:
   - Oracle.JDK.25
   - Oven-sh.Bun
   - Rustlang.Rustup
+  - SagerNet.sing-box
   - sharkdp.bat
   - sharkdp.fd
   - sharkdp.hexyl
   - sharkdp.hyperfine
   - sharkdp.pastel
-  - Tencent.WeChat.Universal
+  - Sigstore.Cosign
   - VideoLAN.VLC
+  - zig.zig
 wsl:
   - dotnet
   - fzf

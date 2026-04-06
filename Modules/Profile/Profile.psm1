@@ -51,12 +51,15 @@ function Format-Duration {
   }
 }
 
-function Get-PowerShellExecArgs ([switch]$ExpectingInput) {
-  [string[]]$ags = $args.Where{ $null -ne $_ }
+function Get-PowerShellExecArgs {
+  if ($args[0] -isnot [bool]) {
+    throw "`$args[0] (ExpectingInput) must be a boolean."
+  }
+  [string[]]$ags = $args[1].ForEach{ $_.Where{ $null -ne $_ } }
   if (!$ags) {
     return $ags
   }
-  if ($args[0] -is [scriptblock]) {
+  if ($args[1][0] -is [scriptblock]) {
     $ags = 'pwsh', '-nop', '-cwa' + $ags
     for ($i = 4; $i -lt $ags.Count; $i++) {
       if ($ags[$i].StartsWith('-')) {
@@ -88,7 +91,7 @@ function Get-PowerShellExecArgs ([switch]$ExpectingInput) {
     }
     elseif ($info.Module) {
       $ags[0] = $info.ModuleName + '\' + $info.Name
-      if ($ExpectingInput) {
+      if ($args[0]) {
         $ags[0] = '$input|' + $ags[0]
       }
       $ags = 'pwsh', '-nop', '-c' + $ags
@@ -252,32 +255,26 @@ function ee {
     default { $env:EDITOR; break }
   }
   if ($MyInvocation.ExpectingInput) {
-    Write-Debug "| $cmd $ags"
-    $input | & $cmd $ags
+    Write-Debug "| $cmd $args"
+    $input | & $cmd $args
   }
   else {
-    Write-Debug "$cmd $ags"
-    & $cmd $ags
+    Write-Debug "$cmd $args"
+    & $cmd $args
   }
 }
 
 function env {
-  $reEnv = [regex]::new('^\w+\+?=')
+  $reEnv = [regex]::new('^\w+=')
   $envMap = [Dictionary[string, string]]::new()
-  # flat iterator args for native passing
-  # note: replace token -- with `-- to escape function passing
-  [string[]]$ags = $args.Where{ $null -ne $_ }
+  [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   $cmd, $ags = foreach ($arg in $ags) {
     if (!$reEnv.IsMatch($arg)) {
       $arg
       $foreach
       break
     }
-    [string]$key, [string]$value = $arg.Split('=', 2)
-    if ($key.EndsWith('+')) {
-      $key = $key.TrimEnd('+')
-      $value = [System.Environment]::GetEnvironmentVariable($key) + $value
-    }
+    $key, $value = $arg.Split('=', 2)
     $envMap[$key] = $value
   }
   $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
@@ -300,7 +297,6 @@ function env {
     $savedEnvMap.GetEnumerator().ForEach{
       Set-Item -LiteralPath Env:$($_.Key) $_.Value
     }
-    Pop-Location
   }
 }
 
@@ -315,7 +311,7 @@ function npm {
     default { 'npm'; break }
   }
   $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
-  [string[]]$ags = $args.Where{ $null -ne $_ }
+  [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $ags"
     $input | & $cmd $ags
@@ -327,7 +323,7 @@ function npm {
 }
 
 function npx {
-  [string]$cmd, [string[]]$ags = $args.Where{ $null -ne $_ }
+  [string]$cmd, [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   $cmd = (Get-Command ./node_modules/.bin/$cmd, $cmd -Type Application -TotalCount 1 -ea Ignore)?[0].Source
   if (!$cmd) {
     # fallback to handle options
@@ -378,10 +374,13 @@ function prompt {
 }
 
 function sudo {
-  $ags = Get-PowerShellExecArgs $args
+  $ags = Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args
   if ($cmd = (Get-Command sudo -CommandType Application -TotalCount 1 -ea Ignore).Source) {
-    if ($ags[0] -ceq 'pwsh') {
-      $ags = , '-E' + $ags
+    $ags = if ($ags[0] -ceq 'pwsh') {
+      '-E', '--' + $ags
+    }
+    else {
+      , '--' + $ags
     }
     if ($MyInvocation.ExpectingInput) {
       Write-Debug "| $cmd $ags"
@@ -405,74 +404,112 @@ function sudo {
 }
 
 function x {
-  $cmd, $ags = @(
-    if (!$MyInvocation.ExpectingInput) {
-      $term = switch ($env:TERM) {
-        'alacritty' { $_; break }
-        'xterm-ghostty' { $_; break }
-        'xterm-kitty' { $_; break }
-        default {
-          if ($env:ALACRITTY_LOG) { 'alacritty' }
-          elseif ($env:GHOSTTY_BIN_DIR) { 'ghostty' }
-          elseif ($env:KITTY_PID) { 'kitty' }
-          elseif ($env:WT_SESSION -or (Get-Command wt -CommandType Application -TotalCount 1 -ea Ignore)) { 'wt' }
-          break
-        }
-      }
-      switch ($term) {
-        'alacritty' {
-          if ($IsWindows) {
-            { Start-Process alacritty ('--hold', '-e' + $args) }
-          }
-          elseif (Get-Process alacritty -ea Ignore) {
-            'alacritty', 'msg', 'create-window', '--hold', '-e'
-          }
-          elseif ($IsMacOS) {
-            'open', '-a', 'alacritty.app', '-n', '--', '--hold', '-e'
-          }
-          elseif ($IsLinux) {
-            { (setsid -f alacritty --hold -e $args &) | Wait-Job | Remove-Job }
-          }
-          break
-        }
-        'xterm-ghostty' { 'ghostty', '+new-window', '-e'; break }
-        'xterm-kitty' { $IsMacOS ? 'open', '-a', 'kitty.app', '-n', '--' : 'kitty', '--detach'; '--hold', '--'; break }
-        'wt' { 'wt', 'nt', '--'; break }
-        default {
-          if ($IsWindows) {
-            { $cmd, $ags = $args; Start-Process $cmd $ags }
-          }
-          elseif ($IsMacOS) {
-            throw [System.NotImplementedException]::new('iterm2 not implemented')
-          }
-          elseif ($IsLinux) {
-            { (Start-Process setsid (, '-f' + $args) &) | Wait-Job | Remove-Job }
-          }
-          break
-        }
-      }
+  <#
+  .SYNOPSIS
+  Open a terminal executing the command with expanded arguments and/or piped input.
+   #>
+  $term = switch ($env:TERM) {
+    'alacritty' { $_; break }
+    'xterm-ghostty' { $_; break }
+    'xterm-kitty' { $_; break }
+    default {
+      if ($env:ALACRITTY_LOG) { 'alacritty' }
+      elseif ($env:GHOSTTY_BIN_DIR) { 'ghostty' }
+      elseif ($env:KITTY_PID) { 'kitty' }
+      elseif ($env:WT_SESSION -or (Get-Command wt -CommandType Application -TotalCount 1 -ea Ignore)) { 'wt' }
+      elseif ($IsWindows) { 'cmd' }
+      else { throw 'terminal not found' }
+      break
     }
-    $cmd, $ags = Get-PowerShellExecArgs $args $MyInvocation.ExpectingInput
-    switch ([System.IO.Path]::GetFileNameWithoutExtension($cmd)) {
-      'aria2c' { $cmd, '-x2', '-j32', '-d', [System.IO.Path]::GetTempPath(), '--allow-overwrite', "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')"; break }
-      'msiexec' { 'sudo', '--', $cmd, '/qn', '/norestart', '/log', "$env:TEMP\msiexec.log", '/i'; break }
-      'installer' { 'sudo', '--', $cmd, '-dumplog', '-pkg'; break }
-      'winget' { 'sudo', '--', $cmd; break }
-      default { $cmd; break }
+  }
+  $term = switch ($term) {
+    'alacritty' {
+      if ($IsWindows) {
+        'conhost', 'alacritty', '--title', $args[0], '-e'
+      }
+      elseif (Get-Process alacritty -ea Ignore) {
+        'alacritty', 'msg', 'create-window', '--title', $args[0], '-e'
+      }
+      elseif ($IsMacOS) {
+        'open', '-n', '-a', 'alacritty.app', '--', '--title', $args[0], '-e'
+      }
+      else {
+        'sh', '-c', 'nohup "$0" "$@" > /dev/null 2>&1', 'alacritty', '--title', $args[0], '-e'
+      }
+      break
     }
-    $ags
-  )
-  if ($MyInvocation.ExpectingInput) {
-    Write-Debug "| $cmd $ags"
-    $input | & $cmd $ags
+    'xterm-ghostty' { 'ghostty', '+new-window', '--title', $args[0], '-e'; break }
+    'xterm-kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $args[0], '--' : 'kitty', '--detach', '--title', $args[0]; '--'; break }
+    'wt' { 'wt', 'nt', '--title', $args[0], '--'; break }
+    'cmd' { 'cmd', '/d', '/c', 'start', ('"' + ([string]$args[0]).Replace('"', '""') + '"'); break }
+    # no default
+  }
+  $cmd, $ags = Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args
+  $cmd = switch ([System.IO.Path]::GetFileNameWithoutExtension($cmd)) {
+    'aria2c' { $cmd, '-x2', '-j32', '-d', [System.IO.Path]::GetTempPath(), '--allow-overwrite', "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')"; break }
+    'msiexec' { 'sudo', '--', $cmd, '/qn', '/norestart', '/log', "${env:TEMP}msiexec.log", '/i'; break }
+    'installer' { 'sudo', '--', $cmd, '-dumplog', '-pkg'; break }
+    'winget' { 'sudo', '--', $cmd; break }
+    default { $cmd; break }
+  }
+  $cmd = [string[]]$cmd + $ags
+  $cmd = if ($IsWindows) {
+    $cmd.Replace('"', '""') | Join-String -Separator '" "' -OutputPrefix '"' -OutputSuffix '"'
   }
   else {
-    Write-Debug "$cmd $ags"
-    & $cmd $ags
+    $cmd.Replace('"', '""') | Join-String -Separator "' '" -OutputPrefix "'" -OutputSuffix "'"
   }
+  if ($MyInvocation.ExpectingInput) {
+    $file = [System.IO.Path]::GetTempFileName()
+    $input > $file
+    $cmd = "$cmd < $file"
+    $ags = $IsWindows ? "del $file" : "rm $file"
+  }
+  else {
+    $ags = $IsWindows ? 'break' : ':'
+  }
+  $cmd, $ags = if ($IsWindows) {
+    $cmd = @"
+@echo off &
+for /l %_ in () do (
+  $cmd &
+  if errorlevel 1 (
+    set ec=!ERRORLEVEL! &
+    echo process exited with code !ec! >&2 &
+    choice /d n /t 9999 /m Retry &
+    if errorlevel 2 ($ags & exit /b !ec!)
+  ) else ($ags & exit /b 0)
+)
+"@ -creplace '\r?\n\s*', ' '
+    [string[]]$term + 'cmd', '/v:on', '/d', '/c', $cmd
+  }
+  else {
+    [string[]]$term + 'sh', '-c', @"
+while true; do
+  $cmd
+  ec=`$?
+  if [ "`$ec" != 0 ]; then
+    echo "process exited with code `$ec" >&2
+    echo 'press ctrl+d to exit, or press enter to retry' >&2
+    while read -rsn1 -t "`$EPOCHSECONDS"; do
+      if [ "`$REPLY" = $'\004' ]; then
+        break
+      elif [ -z "`$REPLY" ]; then
+        break 2
+      fi
+    done
+  fi
+  $ags
+  exit "`$ec"
+done
+"@
+  }
+  Write-Debug "$cmd $ags"
+  & $cmd $ags
 }
 #endregion
 
+#region internal
 filter showHelp ([string[]]$ArgumentList) {
   $item = $_
   if ($item -is [System.IO.FileSystemInfo]) {
@@ -735,3 +772,4 @@ filter showFile ([string[]]$ArgumentList) {
     }
   }
 }
+#endregion

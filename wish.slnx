@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Modules/">
     <Project Path="Modules/LSColors/LSColors.csproj" />
+    <Project Path="Modules/PSCoreAudio/PSCoreAudio.csproj" />
+    <Project Path="Modules/PSCoreAudioUnitTests/PSCoreAudioUnitTests.csproj" />
   </Folder>
 </Solution>

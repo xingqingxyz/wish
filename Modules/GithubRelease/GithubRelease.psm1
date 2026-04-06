@@ -136,12 +136,6 @@ function Update-Software {
     code {
       code --update-extensions
       if ($Force) {
-        $configDir = switch ($true) {
-          $IsWindows { $env:APPDATA; break }
-          $IsMacOS { "$HOME/Library/Application Support"; break }
-          $IsLinux { "$HOME/.config"; break }
-          default { throw [System.NotImplementedException]::new() }
-        }
         if (!(Test-Path -LiteralPath $configDir/Code/User/sync/profiles/lastSyncprofiles.json)) {
           continue
         }
@@ -381,7 +375,7 @@ function rustenv {
     $IsMacOS { break }
     $IsLinux { 'gnu'; break }
   }
-  $target = @($arch, $platform, $os, $clib).Where{ $null -ne $_ } -join '-'
+  $target = ($arch, $platform, $os, $clib).Where{ $_ } -join '-'
   [pscustomobject]@{
     arch     = $arch
     platform = $platform
@@ -917,7 +911,7 @@ function Install-Release {
       }
       switch ($true) {
         $IsWindows {
-          Invoke-Sudo Install-MSIProduct -LiteralPath $buildDir/$file
+          sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file
           break
         }
         $IsLinux {
@@ -1110,7 +1104,7 @@ StartupWMClass=localsend_app
       }
       Invoke-FileDownload "https://nodejs.org/dist/$($Meta.tag)/$file"
       switch ($true) {
-        $IsWindows { Invoke-Sudo Install-MSIProduct -LiteralPath $buildDir/$file; break }
+        $IsWindows { sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file; break }
         $IsMacOS { sudo installer -pkg $buildDir/$file -dumplog > Temp:/$file.log; break }
         $IsLinux {
           $root = "$prefixDir/nodejs/$($Meta.tag)"
@@ -1150,7 +1144,7 @@ StartupWMClass=localsend_app
         $IsWindows {
           $file = 'PowerShell-{0}-win-{1}.msi' -f $id, $arch
           Invoke-ReleaseDownload $Meta $file
-          Invoke-Sudo Install-MSIProduct -LiteralPath $buildDir/$file
+          sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file
           break
         }
         $IsMacOS {
@@ -1316,7 +1310,7 @@ StartupWMClass=localsend_app
         default { '.appimage'; break }
       }
       $file = "WeChatLinux_$arch$ext"
-      Invoke-FileDownload https://dldir1v6.qq.com/weixin/Universal/Linux/$file
+      Invoke-FileDownload "https://dldir1v6.qq.com/weixin/Universal/Linux/$file"
       switch ($true) {
         $IsFedora { sudo dnf install -y $buildDir/$file; break }
         $IsUbuntu { sudo dpkg -i $buildDir/$file; break }
@@ -1376,10 +1370,20 @@ if ($IsLinux) {
 }
 
 $prefixDir = $IsWindows ? "$env:LOCALAPPDATA\prefix" : "$HOME/.local"
-$dataDir = [System.IO.Path]::Join($prefixDir, 'share')
 $binDir = [System.IO.Path]::Join($prefixDir, 'bin')
+$dataDir = [System.IO.Path]::Join($prefixDir, 'share')
+$configDir = switch ($true) {
+  $IsWindows { $env:APPDATA; break }
+  $IsMacOS { "$HOME/Library/Application Support"; break }
+  default { "$HOME/.config"; break }
+}
 
 $sudoPrefixDir = $IsWindows ? "$env:ProgramData\prefix" : '/usr/local'
-$sudoDataDir = [System.IO.Path]::Join($sudoPrefixDir, 'share')
 $sudoBinDir = [System.IO.Path]::Join($sudoPrefixDir, 'bin')
+# $sudoDataDir = [System.IO.Path]::Join($sudoPrefixDir, 'share')
+# $sudoConfigDir = switch ($true) {
+#   $IsWindows { $env:ProgramData; break }
+#   $IsMacOS { '/usr/local/etc'; break }
+#   default { '/etc'; break }
+# }
 #endregion

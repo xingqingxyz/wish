@@ -1,16 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
-function Clear-Module {
-  <#
-  .SYNOPSIS
-  Clear outdated modules.
-   #>
-  Get-InstalledModule | Group-Object Name | Where-Object Count -GT 1 | ForEach-Object {
-    $_.Group | Sort-Object -Descending { [version]$_.Version } | Select-Object -Skip 1
-  } | ForEach-Object { Uninstall-Module $_.Name -MaximumVersion $_.Version }
-}
-
+#region exports
 function Get-GithubRepositoryBlob {
   [CmdletBinding()]
   param (
@@ -180,7 +171,7 @@ function Register-PSScheduledTask {
     # HACK: no show cmd window
     $action = New-ScheduledTaskAction -Execute (Get-Command uvw -Type Application -TotalCount 1).Source -Argument "run -- $Command" -WorkingDirectory $WorkingDirectory
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable:$Persistent -RunOnlyIfNetworkAvailable:$Network -RestartCount 2 -RestartInterval 0:12
-    Register-ScheduledTask $Name -Description "PowerShell $Name task" -Trigger $trigger -Action $action -Settings $settings -RunSeverity ($AsAdmin ? 'Highest' : 'Limited') -Force:$Force
+    Register-ScheduledTask $Name -Description "PowerShell $Name task" -Trigger $trigger -Action $action -Settings $settings -RunLevel ($AsAdmin ? 'Highest' : 'Limited') -Force:$Force
   }
   elseif ($IsLinux) {
     # note: not accurate implementation
@@ -451,30 +442,20 @@ function New-RelativeSymlink {
   }
 }
 
-function Repair-GitSymlinks {
-  git ls-files -s | ForEach-Object {
-    [int]$mode, $item = $_ -split '\s+', 4
-    if ($mode -ne 120000) {
-      return
+function Get-DarkMode {
+  if ($IsWindows) {
+    return !(Get-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name 'SystemUsesLightTheme').SystemUsesLightTheme
+  }
+  elseif ($IsLinux) {
+    if ($env:XDG_CURRENT_DESKTOP -clike '*GNOME') {
+      return (gsettings get org.gnome.desktop.interface color-scheme) -ceq "'prefer-dark'"
     }
-    $item = $item[2].TrimStart()
-    try {
-      $item = Get-Item -LiteralPath $item -Force -ea Stop
+    elseif ($env:XDG_CURRENT_DESKTOP -clike '*KDE') {
     }
-    catch {
-      return Write-Warning "staged symlink not found: $item"
-    }
-    if ($item.LinkType -cne 'SymbolicLink') {
-      $target = Get-Content -Raw -LiteralPath $item
-      if ($target.StartsWith('.' + [System.IO.Path]::DirectorySeparatorChar)) {
-        $target = $target.Substring(2)
-      }
-      New-Item -ItemType SymbolicLink -Force -Target $target $item
-    }
-    elseif ($item.Target.StartsWith('.' + [System.IO.Path]::DirectorySeparatorChar)) {
-      New-Item -ItemType SymbolicLink -Force -Target $item.Target.Substring(2) $item
+    elseif (Get-Process dms -ea Ignore) {
     }
   }
+  $false
 }
 
 function Send-Notify {
@@ -522,53 +503,6 @@ function Send-Notify {
   }
 }
 
-function Invoke-CodeFormatter {
-  [CmdletBinding(DefaultParameterSetName = 'Path')]
-  [Alias('icf')]
-  [OutputType([string[]])]
-  param (
-    [Parameter(Mandatory, Position = 0, ParameterSetName = 'Path')]
-    [ValidateNotNullOrEmpty()]
-    [SupportsWildcards()]
-    [string[]]
-    $Path,
-    [Parameter(Mandatory, ParameterSetName = 'LiteralPath')]
-    [Alias('LP')]
-    [ValidateNotNullOrEmpty()]
-    [string[]]
-    $LiteralPath,
-    [Parameter(Mandatory, Position = 0, ParameterSetName = 'Stdin')]
-    [ValidateNotNullOrEmpty()]
-    [string]
-    $Language,
-    [Parameter(ParameterSetName = 'Path')]
-    [Parameter(ParameterSetName = 'LiteralPath')]
-    [switch]
-    $Inplace,
-    [Parameter(ParameterSetName = 'Stdin')]
-    [System.Object]
-    $InputObject
-  )
-  if ($MyInvocation.ExpectingInput) {
-    if ($MyInvocation.PipelinePosition -lt $MyInvocation.PipelineLength) {
-      return $input | & (Get-CodeFormatParser $Language -Stdin)
-    }
-    return $input | & (Get-CodeFormatParser $Language -Stdin) | bat -pl$Language
-  }
-  if ($Path) {
-    $LiteralPath = Convert-Path $Path -Force
-  }
-  if ($Inplace) {
-    return $LiteralPath.ForEach{ & (Get-CodeFormatParser $_ -Inplace) $_ }
-  }
-  if ($MyInvocation.PipelinePosition -lt $MyInvocation.PipelineLength) {
-    return $LiteralPath.ForEach{ & (Get-CodeFormatParser $_) $_ }
-  }
-  $LiteralPath.ForEach{
-    & (Get-CodeFormatParser $_) $_ | bat -p --color=always --file-name=$_
-  } | & $env:PAGER
-}
-
 function de {
   [CmdletBinding()]
   param (
@@ -578,7 +512,7 @@ function de {
     $Digraph
   )
   if (!$vimDigraph) {
-    $Script:vimDigraph = Import-Csv -LiteralPath $PSScriptRoot/vimDigraph.tsv -Delimiter "`t" -ea Stop
+    $Script:vimDigraph = Import-Csv -LiteralPath $PSScriptRoot/vimDigraph.tsv -Delimiter "`t"
   }
   foreach ($item in $vimDigraph) {
     if ($item.digraph -ceq $Digraph) {
@@ -671,244 +605,5 @@ bat --number --color=always --terminal-width=$envVar --highlight-line={2} {1}
   )
   fzf $ags
 }
-
-function theme.f {
-  [CmdletBinding()]
-  param (
-    [Parameter(Position = 0)]
-    [ValidateSet('alacritty', 'bat', 'ghostty', 'kitty')]
-    [string]
-    $AppName
-  )
-  if (!$AppName) {
-    $AppName = if ($env:ALACRITTY_LOG) {
-      'alacritty'
-    }
-    elseif ($env:GHOSTTY_BIN_DIR) {
-      'ghostty'
-    }
-    elseif ($env:KITTY_PID) {
-      'kitty'
-    }
-    else {
-      'bat'
-    }
-  }
-  switch ($AppName) {
-    alacritty {
-      [string]$preview = {
-        $configFile = "$env:WISH_ROOT/_/.config/alacritty/alacritty.toml"
-        $importFile = "$($env:WISH_ROOT.Replace($HOME, '~').Replace('\', '/'))/alacritty-theme/themes/$("$input".Trim(' "')).toml"
-        Set-Region -Inplace import "import = [`"$importFile`"]" $configFile
-        @"
-|039| `e[39mDefault `e[m  |049| `e[49mDefault `e[m  |037| `e[37mLight gray `e[m     |047| `e[47mLight gray `e[m
-|030| `e[30mBlack `e[m    |040| `e[40mBlack `e[m    |090| `e[90mDark gray `e[m      |100| `e[100mDark gray `e[m
-|031| `e[31mRed `e[m      |041| `e[41mRed `e[m      |091| `e[91mLight red `e[m      |101| `e[101mLight red `e[m
-|032| `e[32mGreen `e[m    |042| `e[42mGreen `e[m    |092| `e[92mLight green `e[m    |102| `e[102mLight green `e[m
-|033| `e[33mYellow `e[m   |043| `e[43mYellow `e[m   |093| `e[93mLight yellow `e[m   |103| `e[103mLight yellow `e[m
-|034| `e[34mBlue `e[m     |044| `e[44mBlue `e[m     |094| `e[94mLight blue `e[m     |104| `e[104mLight blue `e[m
-|035| `e[35mMagenta `e[m  |045| `e[45mMagenta `e[m  |095| `e[95mLight magenta `e[m  |105| `e[105mLight magenta `e[m
-|036| `e[36mCyan `e[m     |046| `e[46mCyan `e[m     |096| `e[96mLight cyan `e[m     |106| `e[106mLight cyan `e[m
-"@
-      }
-      $preview = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($preview))
-      $configFile = "$env:WISH_ROOT/_/.config/alacritty/alacritty.toml"
-      $region = Get-Region import $configFile
-      $theme = [regex]::Match($region[0], '([^"/]+)\.toml"$').Groups[1].Value
-      Split-Path -Resolve -LeafBase $env:WISH_ROOT/alacritty-theme/themes/* -ea Stop | fzf --preview="echo {} | pwsh -nop -o Text -e $preview" -q $theme
-      if (!$?) {
-        Set-Region -Inplace import $region $configFile
-      }
-      break
-    }
-    bat {
-      $theme = bat --list-themes | fzf --preview="bat --theme={} -plsh --color=always $HOME/.bashrc" -q "$env:BAT_THEME"
-      if ($theme) {
-        Set-EnvironmentVariable -Scope User BAT_THEME=$theme
-      }
-      break
-    }
-    default { throw [System.NotImplementedException]::new($_) }
-  }
-}
 #endregion
 #endregion
-
-function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) {
-  switch -CaseSensitive -Regex ([System.IO.Path]::GetExtension($Path).Substring(1)) {
-    '^(?:c|m|mm|cpp|cc|cp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|inl|ipp|java|proto|protodevel)$' {
-      if ($Inplace) {
-        { clang-format -i --style=LLVM `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | clang-format --style=LLVM --assume-filename=$args[0] }
-      }
-      else {
-        { clang-format --style=LLVM `-- $args[0] }
-      }
-      break
-    }
-    '^(?:dart)$' {
-      if ($Inplace) {
-        { dart format `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | dart format }
-      }
-      else {
-        { dart format -o show --show none --summary none `-- $args[0] }
-      }
-      break
-    }
-    '^(?:cs|csx|fs|fsi|fsx|vb)$' {
-      if ($Inplace) {
-        { dotnet format --no-restore --include `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        {
-          process {
-            $file = [System.IO.Path]::GetRandomFileName() + [System.IO.Path]::GetExtension($args[0])
-            $input > $file
-            dotnet format --no-restore --include `-- $file
-            Get-Content -LiteralPath $file
-          }
-          clean {
-            Remove-Item -LiteralPath $file -Force
-          }
-        }
-      }
-      else {
-        {
-          process {
-            $file = [System.IO.Path]::GetTempFileName()
-            Copy-Item -LiteralPath $args[0] $file -Force
-            dotnet format --no-restore --include `-- $args[0]
-            Get-Content -LiteralPath $args[0]
-          }
-          clean {
-            Copy-Item -LiteralPath $file $args[0] -Force
-            Remove-Item -LiteralPath $file -Force
-          }
-        }
-      }
-      break
-    }
-    '^(?:go)$' {
-      if ($Inplace) {
-        { goimports -w `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | goimports }
-      }
-      else {
-        { goimports `-- $args[0] }
-      }
-      break
-    }
-    '^(?:js|cjs|mjs|jsx|tsx|ts|cts|mts|json|jsonc|json5|yml|yaml|htm|html|xhtml|shtml|vue|gql|graphql|css|scss|sass|less|hbs|md|markdown)$' {
-      if ($Inplace) {
-        { prettier -w --ignore-path= `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | prettier --ignore-path= --stdin-filepath=$args[0] }
-      }
-      else {
-        { prettier --ignore-path= `-- $args[0] }
-      }
-      break
-    }
-    '^(?:ps1|psm1|psd1)$' {
-      if ($Inplace) {
-        { PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $args[0]) -Settings $env:WISH_ROOT/CodeFormatting.psd1 | Out-File -NoNewline $args[0] }
-      }
-      elseif ($Stdin) {
-        { PSScriptAnalyzer\Invoke-Formatter $input -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
-      }
-      else {
-        { PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $args[0]) -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
-      }
-      break
-    }
-    '^(?:py|pyi|pyw|pyx|pxd|gyp|gypi)$' {
-      if ($Inplace) {
-        { ruff format -n `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | ruff format -n --stdin-filename $args[0] }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | ruff format -n --stdin-filename $args[0] }
-      }
-      break
-    }
-    '^(?:rs)$' {
-      if ($Inplace) {
-        { rustfmt `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | rustfmt --emit stdout }
-      }
-      else {
-        { rustfmt --emit stdout `-- $args[0] }
-      }
-      break
-    }
-    '^(?:sh|bash|zsh|ash)$' {
-      if ($Inplace) {
-        { shfmt -i 2 -bn -ci -sr `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | shfmt -i 2 -bn -ci -sr --filename $args[0] }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | shfmt -i 2 -bn -ci -sr --filename $args[0] }
-      }
-      break
-    }
-    '^(?:toml)$' {
-      if ($Inplace) {
-        { taplo format `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | taplo format - --stdin-filepath=$args[0] }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | taplo format - --stdin-filepath=$args[0] }
-      }
-      break
-    }
-    '^(?:lua)$' {
-      if ($Inplace) {
-        { stylua `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | stylua }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | stylua }
-      }
-      break
-    }
-    '^(?:zig)$' {
-      if ($Inplace) {
-        { zig fmt $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | zig fmt --stdin }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | zig fmt --stdin }
-      }
-      break
-    }
-    default {
-      if ($Stdin) {
-        { $input }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] }
-      }
-      break
-    }
-  }
-}
