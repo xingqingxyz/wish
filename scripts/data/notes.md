@@ -48,3 +48,16 @@ FZF_CLICK_FOOTER_COLUMN
 FZF_CLICK_FOOTER_WORD
 FZF_CLICK_FOOTER_NTH
 ```
+
+### SSH
+
+```sh
+# server
+sudo ssh-keygen -A
+# client
+ssh-keygen -t ed25519
+ssh-copy-id user@host
+scp ~/.ssh/id_ed25519.pub user@host:
+ssh user@host
+cat ~/id_ed25519.pub >> ~/.ssh/authorized_keys && rm ~/id_ed25519.pub
+```

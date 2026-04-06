@@ -1,31 +1,21 @@
-function Set-DarkMode ([switch]$Off) {
-  Set-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name 'SystemUsesLightTheme' -Value ([int]$Off.IsPresent) -Type DWord
-  Set-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name 'AppsUseLightTheme' -Value ([int]$Off.IsPresent) -Type DWord
-}
-
-function Set-DscResourcePath {
-  $env:DSC_RESOURCE_PATH = $null
-  $resources = dsc resource list | ConvertFrom-Json
-  $env:DSC_RESOURCE_PATH = ($resources.directory | Sort-Object -Unique) -join [System.IO.Path]::PathSeparator
-  [System.Environment]::SetEnvironmentVariable('DSC_RESOURCE_PATH', $env:DSC_RESOURCE_PATH, 'User')
-}
-
 # data dirs for GithubRelease
-[string[]]$dirs = @(
+New-Item -ItemType Directory -Force @(
   "$env:LOCALAPPDATA\prefix\bin"
   "$env:LOCALAPPDATA\prefix\share\jar"
   1..8 | ForEach-Object { "$env:LOCALAPPDATA\prefix\share\man\man$_" }
 )
-New-Item -ItemType Directory $dirs -Force
-# alacritty startup
-if (Get-Command alacritty -Type Application -TotalCount 1 -ea Ignore) {
-  New-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Alacritty' -Value 'C:\Program Files\Alacritty\alacritty.exe' -PropertyType String -Force
-}
-else {
-  Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Alacritty' -ea Ignore
-}
-# misc
-Set-DarkMode
-if (Get-Command dsc -CommandType Application -TotalCount 1 -ea Ignore) {
-  Set-DscResourcePath
+# auto run apps on login
+@(
+  'C:\Program Files\Alacritty\alacritty.exe'
+  'C:\Program Files\Tencent\Weixin\Weixin.exe'
+).ForEach{
+  $name = [System.IO.Path]::GetFileNameWithoutExtension($_)
+  if (Test-Path -LiteralPath $_) {
+    # FIXME: alacritty is not comfortable
+    $value = $name -ceq 'alacritty' ? "C:\Windows\System32\conhost.exe `"$_`"" : $_
+    New-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name $name -Value $value -PropertyType String -Force
+  }
+  else {
+    Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name $name -ea Ignore
+  }
 }

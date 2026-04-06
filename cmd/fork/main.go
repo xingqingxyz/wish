@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 import (
@@ -10,11 +12,12 @@ var execPath string
 
 func main() {
 	cmd := exec.Command(execPath, os.Args[1:]...)
+	path := "C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\mingw64\\bin;" + os.Getenv("PATH")
+	cmd.Env = append(os.Environ(), "PATH="+path)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	err := cmd.Run()
-	if errors.Is(err, &exec.ExitError{}) {
+	if err := cmd.Run(); errors.Is(err, &exec.ExitError{}) {
 		panic(err)
 	}
 	os.Exit(cmd.ProcessState.ExitCode())

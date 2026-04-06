@@ -7,7 +7,7 @@ import time
 import uiautomation as am
 
 
-def set_light_theme(light=False):
+def set_dark_theme(dark=True):
     # 1. 打开 Windows 设置
     os.startfile("ms-settings:")
     time.sleep(1)
@@ -23,14 +23,16 @@ def set_light_theme(light=False):
     print("send search text")
     search_box.SendKeys("浅色主题设置")
     print("click first suggestion")
-    window.ListControl(AutomationId="SuggestionsList").GetFirstChildControl().Click()  # type: ignore
+    window.ListControl(AutomationId="SuggestionsList").GetFirstChildControl().Click(  # type: ignore
+        simulateMove=False
+    )
     combo = window.ComboBoxControl(
         AutomationId="SystemSettings_Personalize_Color_ColorMode_ComboBox"
     )
     print("click combo")
-    combo.Click()
+    combo.Click(simulateMove=False)
     print("click li")
-    combo.ListItemControl(Name="浅色" if light else "深色").Click()
+    combo.ListItemControl(Name="深色" if dark else "浅色").Click()
     print("close window")
     window.SendKeys("{ALT}{F4}")
 
@@ -45,4 +47,4 @@ if __name__ == "__main__":
         if not am.IsUserAnAdmin():
             am.RunScriptAsAdmin(sys.argv)
             exit()
-    set_light_theme(len(sys.argv) > 1 and sys.argv[1] == "light")
+    set_dark_theme(len(sys.argv) <= 1 or sys.argv[1] == "on")

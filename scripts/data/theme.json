@@ -1,0 +1,12 @@
+{
+  "dark": {
+    "windows_terminal": "CGA",
+    "alacritty": "tokyo_night_enhanced",
+    "bat": "Catppuccin Frappe"
+  },
+  "light": {
+    "windows_terminal": "CGA",
+    "alacritty": "tokyo_night_enhanced",
+    "bat": "GitHub"
+  }
+}

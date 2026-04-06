@@ -45,14 +45,11 @@ else {
 # 设置壁纸
 try {
   if ($IsWindows) {
-    Add-Type -TypeDefinition @'
-      using System.Runtime.InteropServices;
-      public class Wallpaper {
-        [DllImport("user32.dll", SetLastError=true)]
-        public static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-      }
+    $type = Add-Type -Namespace 'Win32' -PassThru '_SystemParametersInfo' @'
+[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+public static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 '@
-    if (![Wallpaper]::SystemParametersInfo(20, 0, $wallpaperPath, 3)) {
+    if (!$type::SystemParametersInfo(20, 0, $wallpaperPath, 3)) {
       throw 'api set wallpaper failed'
     }
   }

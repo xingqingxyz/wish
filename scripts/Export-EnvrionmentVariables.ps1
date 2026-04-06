@@ -1,9 +1,12 @@
 $WISH_ROOT = [System.IO.Path]::GetDirectoryName($PSScriptRoot)
 $ANDROID_HOME = $IsWindows ? "$env:LOCALAPPDATA\Android\Sdk" : "$HOME/.local/share/Android/Sdk"
-if ($cmd = Get-Command java -CommandType Application -TotalCount 1 -ea Ignore) {
-  $JAVA_HOME = [System.IO.Path]::GetDirectoryName([System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $cmd.Source -Force).ResolvedTarget))
+$DSC_RESOURCE_PATH = if (Get-Command dsc -CommandType Application -TotalCount 1 -ea Ignore) {
+  ((dsc resource list | ConvertFrom-Json).directory | Sort-Object -Unique) -join [System.IO.Path]::PathSeparator
 }
-$DSC_RESOURCE_PATH = $IsWindows ? '' : "$HOME/.local/dsc"
+$FLUTTER_HOME = $IsWindows ? "$env:LOCALAPPDATA\prefix\flutter" : "$HOME/.local/flutter"
+$JAVA_HOME = if ($cmd = (Get-Command java -CommandType Application -TotalCount 1 -ea Ignore).Source) {
+  [System.IO.Path]::GetDirectoryName([System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $cmd -Force).ResolvedTarget))
+}
 
 # PSModulePath
 $PSModulePath = $IsWindows ? "$WISH_ROOT\Modules" : @"
@@ -34,6 +37,7 @@ $FZF_DEFAULT_OPTS = @'
 --bind=alt-n:preview-down
 --bind=alt-p:preview-up
 --bind=alt-z:toggle-wrap
+--bind=btab:toggle-in
 --bind=ctrl-/:preview-bottom
 --bind=ctrl-\\:preview-top
 --bind=ctrl-a:toggle-all
@@ -46,6 +50,7 @@ $FZF_DEFAULT_OPTS = @'
 --bind=ctrl-left:backward-word
 --bind=ctrl-right:forward-word
 --bind=ctrl-u:half-page-up
+--bind=tab:toggle-out
 '@.ReplaceLineEndings(' ')
 
 # proxy
@@ -64,6 +69,7 @@ $commonVar = @{
   ANDROID_HOME             = $ANDROID_HOME
   DSC_RESOURCE_PATH        = $DSC_RESOURCE_PATH
   EDITOR                   = 'edit'
+  FLUTTER_HOME             = $FLUTTER_HOME
   FLUTTER_GIT_URL          = 'https://mirrors.tuna.tsinghua.edu.cn/git/flutter-sdk.git'
   FLUTTER_STORAGE_BASE_URL = 'https://storage.flutter-io.cn'
   FZF_DEFAULT_OPTS         = $FZF_DEFAULT_OPTS

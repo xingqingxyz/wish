@@ -1,5 +1,5 @@
 # gnome-shell
-Get-Content -LiteralPath "$PSScriptRoot/../data/gnome-shell.ini" | dconf load /org/gnome/shell/
+Get-Content -LiteralPath $PSScriptRoot/data/gnome-shell.ini | dconf load /org/gnome/shell/
 # no_proxy
 gsettings set org.gnome.system.proxy ignore-hosts ($env:no_proxy.Split(',') | ConvertTo-Json)
 # nautilus

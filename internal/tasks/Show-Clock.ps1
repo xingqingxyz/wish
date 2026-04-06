@@ -5,10 +5,11 @@ Show clock alarm at breakfast, lunch or dinner.
 [string]$scriptText = if ($IsWindows) {
   {
     Send-Notify -Title %clock% 'It''s time for %dinner%'
-    [double]$audioVolume = (Get-AudioDevice -PlaybackVolume).TrimEnd('%')
-    Set-AudioDevice -PlaybackVolume 60
+    Import-Module PSCoreAudio -ea Stop
+    [double]$audioVolume = [PSCoreAudio.Device]::GetVolume()
+    [PSCoreAudio.Device]::SetVolume(.6)
     1..3 | ForEach-Object { [System.Media.SystemSounds]::Beep.Play(); Start-Sleep 2 }
-    Set-AudioDevice -PlaybackVolume $audioVolume
+    [PSCoreAudio.Device]::SetVolume($audioVolume)
   }
 }
 elseif ($IsLinux) {

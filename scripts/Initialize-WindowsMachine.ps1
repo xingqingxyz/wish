@@ -1,5 +1,4 @@
 #Requires -RunAsAdministrator
-#region env
 # PATH like envs
 @{
   PATHEXT = '.JAR'
@@ -10,14 +9,23 @@
   ) | Select-Object -Unique | Join-String -Separator ';'
   [System.Environment]::SetEnvironmentVariable($_.Key, $value, 'Machine')
 }
-#endregion
 # data dirs for GithubRelease
-[string[]]$dirs = @(
+New-Item -ItemType Directory -Force @(
   "$env:ProgramData\prefix\bin"
   "$env:ProgramData\prefix\share\jar"
   1..8 | ForEach-Object { "$env:ProgramData\prefix\share\man\man$_" }
 )
-New-Item -ItemType Directory $dirs -Force
+# alacritty shortcut
+if (Test-Path -LiteralPath 'C:\Program Files\Alacritty\alacritty.exe') {
+  $shell = New-Object -ComObject WScript.Shell
+  $shortcut = $shell.CreateShortcut('C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Alacritty\Alacritty.lnk')
+  $shortcut.TargetPath = 'C:\Windows\System32\conhost.exe'
+  $shortcut.Arguments = 'C:\Program Files\Alacritty\alacritty.exe'
+  $shortcut.IconLocation = 'C:\Program Files\Alacritty\alacritty.exe,0'
+  $shortcut.WorkingDirectory = $HOME
+  $shortcut.Save()
+  $null = [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+}
 # ssh default shell
 New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell -Value ([System.Environment]::ProcessPath) -PropertyType String -Force
 # wsl
