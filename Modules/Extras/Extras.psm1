@@ -444,18 +444,25 @@ function New-RelativeSymlink {
 
 function Get-DarkMode {
   if ($IsWindows) {
-    return !(Get-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name 'SystemUsesLightTheme').SystemUsesLightTheme
+    !(Get-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name 'SystemUsesLightTheme').SystemUsesLightTheme
   }
   elseif ($IsLinux) {
     if ($env:XDG_CURRENT_DESKTOP -clike '*GNOME') {
-      return (gsettings get org.gnome.desktop.interface color-scheme) -ceq "'prefer-dark'"
+      (gsettings get org.gnome.desktop.interface color-scheme) -ceq "'prefer-dark'"
     }
     elseif ($env:XDG_CURRENT_DESKTOP -clike '*KDE') {
+      (kreadconfig6 --file kdeglobals --group General --key ColorScheme) -clike '*Dark*'
     }
     elseif (Get-Process dms -ea Ignore) {
+      (dms ipc theme getMode) -ceq 'dark'
+    }
+    else {
+      (gdbus call --session --dest org.freedesktop.portal.Desktop --object-path /org/freedesktop/portal/desktop --method org.freedesktop.portal.Settings.Read org.freedesktop.appearance color-scheme) -ceq '(<<uint32 1>>,)'
     }
   }
-  $false
+  else {
+    $false
+  }
 }
 
 function Send-Notify {

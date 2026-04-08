@@ -8,6 +8,9 @@ param (
   $OnlyDesktop
 )
 
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
+
 if ($Off -ne (Get-DarkMode)) {
   return Write-Warning 'dark mode is already set'
 }
@@ -45,8 +48,11 @@ elseif ($IsLinux) {
     gsettings set org.gnome.desktop.interface color-scheme ($Off ? 'prefer-light' : 'prefer-dark')
   }
   elseif ($env:XDG_CURRENT_DESKTOP -clike '*KDE') {
+    plasma-apply-colorscheme ($Off ? 'Breeze' : 'BreezeDark')
+    plasma-apply-desktopscheme ($Off ? 'breeze' : 'breeze-dark')
   }
   elseif (Get-Process dms -ea Ignore) {
+    dms ipc theme ($Off ? 'light' : 'dark')
   }
   else {
     throw "unknown desktop '$env:XDG_CURRENT_DESKTOP'"
@@ -64,4 +70,3 @@ $mode = $Off ? 'light' : 'dark'
 $theme[$mode].GetEnumerator().ForEach{
   bash $PSScriptRoot/theme.sh set $_.Key $_.Value $mode
 }
-$theme | ConvertTo-Json -Depth 1000 > $PSScriptRoot/data/theme.json

@@ -22,7 +22,6 @@ mods = "Alt|Shift"
 command = { program = "alacritty", args = [
   "msg",
   "create-window",
-  "--hold",
   "-T",
   "bash",
   "-e",

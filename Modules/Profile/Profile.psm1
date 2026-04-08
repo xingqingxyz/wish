@@ -237,15 +237,11 @@ function Show-CommandInfo {
   }
 }
 
-function .. {
-  Set-Location -LiteralPath ..
-}
-
-function ... {
+function cd... {
   Set-Location -LiteralPath ../..
 }
 
-function .... {
+function cd.... {
   Set-Location -LiteralPath ../../..
 }
 
@@ -408,10 +404,10 @@ function x {
   .SYNOPSIS
   Open a terminal executing the command with expanded arguments and/or piped input.
    #>
-  $term = switch ($env:TERM) {
+  [string[]]$term = switch ($env:TERM) {
     'alacritty' { $_; break }
-    'xterm-ghostty' { $_; break }
-    'xterm-kitty' { $_; break }
+    'xterm-ghostty' { 'ghostty'; break }
+    'xterm-kitty' { 'kitty'; break }
     default {
       if ($env:ALACRITTY_LOG) { 'alacritty' }
       elseif ($env:GHOSTTY_BIN_DIR) { 'ghostty' }
@@ -422,71 +418,73 @@ function x {
       break
     }
   }
-  $term = switch ($term) {
+  $term = switch ($term[0]) {
     'alacritty' {
       if ($IsWindows) {
         'conhost', 'alacritty', '--title', $args[0], '-e'
       }
       elseif (Get-Process alacritty -ea Ignore) {
-        'alacritty', 'msg', 'create-window', '--title', $args[0], '-e'
+        # alacritty msg working directory is defined by config or $HOME
+        'alacritty', 'msg', 'create-window', '--working-directory', $ExecutionContext.SessionState.Path. CurrentFileSystemLocation.ProviderPath, '--title', $args[0], '-e'
       }
       elseif ($IsMacOS) {
         'open', '-n', '-a', 'alacritty.app', '--', '--title', $args[0], '-e'
       }
       else {
-        'sh', '-c', 'nohup "$0" "$@" > /dev/null 2>&1', 'alacritty', '--title', $args[0], '-e'
+        'sh', '-c', 'setsid -f "$0" "$@" > /dev/null 2>&1', 'alacritty', '--title', $args[0], '-e'
       }
       break
     }
-    'xterm-ghostty' { 'ghostty', '+new-window', '--title', $args[0], '-e'; break }
-    'xterm-kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $args[0], '--' : 'kitty', '--detach', '--title', $args[0]; '--'; break }
+    'ghostty' { 'ghostty', '+new-window', '--title', $args[0], '-e'; break }
+    'kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $args[0], '--' : 'kitty', '--detach', '--title', $args[0]; '--'; break }
     'wt' { 'wt', 'nt', '--title', $args[0], '--'; break }
     'cmd' { 'cmd', '/d', '/c', 'start', ('"' + ([string]$args[0]).Replace('"', '""') + '"'); break }
     # no default
   }
-  $cmd, $ags = Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args
-  $cmd = switch ([System.IO.Path]::GetFileNameWithoutExtension($cmd)) {
-    'aria2c' { $cmd, '-x2', '-j32', '-d', [System.IO.Path]::GetTempPath(), '--allow-overwrite', "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')"; break }
-    'msiexec' { 'sudo', '--', $cmd, '/qn', '/norestart', '/log', "${env:TEMP}msiexec.log", '/i'; break }
-    'installer' { 'sudo', '--', $cmd, '-dumplog', '-pkg'; break }
-    'winget' { 'sudo', '--', $cmd; break }
-    default { $cmd; break }
+  [string[]]$ags = foreach ($cmd in (Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args)) {
+    switch ([System.IO.Path]::GetFileNameWithoutExtension($cmd)) {
+      'aria2c' { $cmd, '-x2', '-j32', '-d', [System.IO.Path]::GetTempPath(), '--allow-overwrite', "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')"; break }
+      'msiexec' { 'sudo', '--', $cmd, '/qn', '/norestart', '/log', "${env:TEMP}msiexec.log", '/i'; break }
+      'installer' { 'sudo', '--', $cmd, '-dumplog', '-pkg'; break }
+      'winget' { 'sudo', '--', $cmd; break }
+      default { $cmd; break }
+    }
+    $foreach
+    break
   }
-  $cmd = [string[]]$cmd + $ags
-  $cmd = if ($IsWindows) {
-    $cmd.Replace('"', '""') | Join-String -Separator '" "' -OutputPrefix '"' -OutputSuffix '"'
+  $ags = if ($IsWindows) {
+    $ags.Replace('"', '""') | Join-String -Separator '" "' -OutputPrefix '"' -OutputSuffix '"'
   }
   else {
-    $cmd.Replace('"', '""') | Join-String -Separator "' '" -OutputPrefix "'" -OutputSuffix "'"
+    $ags.Replace('"', '""') | Join-String -Separator "' '" -OutputPrefix "'" -OutputSuffix "'"
   }
   if ($MyInvocation.ExpectingInput) {
     $file = [System.IO.Path]::GetTempFileName()
     $input > $file
-    $cmd = "$cmd < $file"
-    $ags = $IsWindows ? "del $file" : "rm $file"
+    $ags = "$ags < $file"
+    $clean = $IsWindows ? "del $file" : "rm $file"
   }
   else {
-    $ags = $IsWindows ? 'break' : ':'
+    $clean = $IsWindows ? 'break' : ':'
   }
   $cmd, $ags = if ($IsWindows) {
-    $cmd = @"
+    $term + 'cmd', '/v:on', '/d', '/c', (@"
 @echo off &
 for /l %_ in () do (
-  $cmd &
+  $ags &
   if errorlevel 1 (
     set ec=!ERRORLEVEL! &
     echo process exited with code !ec! >&2 &
     choice /d n /t 9999 /m Retry &
-    if errorlevel 2 ($ags & exit /b !ec!)
-  ) else ($ags & exit /b 0)
+    if errorlevel 2 ($clean & exit /b !ec!)
+  ) else ($clean & exit /b 0)
 )
-"@ -creplace '\r?\n\s*', ' '
-    [string[]]$term + 'cmd', '/v:on', '/d', '/c', $cmd
+"@ -creplace '\r?\n\s*', ' ')
   }
   else {
-    [string[]]$term + 'sh', '-c', @"
+    $term + 'sh', '-c', @"
 while true; do
-  $cmd
+  $ags
   ec=`$?
   if [ "`$ec" != 0 ]; then
     echo "process exited with code `$ec" >&2
@@ -495,11 +493,11 @@ while true; do
       if [ "`$REPLY" = $'\004' ]; then
         break
       elif [ -z "`$REPLY" ]; then
-        break 2
+        continue 2
       fi
     done
   fi
-  $ags
+  $clean
   exit "`$ec"
 done
 "@

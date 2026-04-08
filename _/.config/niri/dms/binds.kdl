@@ -1,9 +1,21 @@
 binds {
     Ctrl+Shift+Escape repeat=false { spawn "dms" "ipc" "call" "processlist" "focusOrToggle"; }
     Super+A repeat=false hotkey-overlay-title="App Launcher: Toggle" { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
-    Super+Ctrl+V repeat=false hotkey-overlay-title="Clipboard: Toggle" { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
+    Super+Ctrl+V hotkey-overlay-title="Clipboard: Toggle" repeat=false { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
     Super+E repeat=false hotkey-overlay-title="Notepad: Toggle" { spawn "dms" "ipc" "notepad" "toggle"; }
-    Super+I repeat=false hotkey-overlay-title="Settings: Focus or Toggle" { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
-    Super+Shift+C repeat=false hotkey-overlay-title="Color Picker: Toggle" { spawn "dms" "ipc" "color-picker" "toggleInstant"; }
+    Super+I hotkey-overlay-title="Settings: Focus or Toggle" repeat=false { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
+    Super+L repeat=false hotkey-overlay-title="Lock Screen" { spawn "dms" "ipc" "call" "lock" "lock"; }
+    Super+Shift+C repeat=false { spawn "dms" "color" "pick" "-al"; }
+    Super+Shift+T repeat=false hotkey-overlay-title="Bar: Toggle (Primary)" { spawn "dms" "ipc" "call" "bar" "toggle" "index" "0"; }
     Super+X repeat=false hotkey-overlay-title="Power Menu: Toggle" { spawn "dms" "ipc" "powermenu" "toggle"; }
+    XF86AudioLowerVolume allow-when-locked=true hotkey-overlay-title="Volume Down (2%)" { spawn "dms" "ipc" "call" "audio" "decrement" "2"; }
+    XF86AudioMicMute allow-when-locked=true hotkey-overlay-title="Microphone Mute Toggle" repeat=false { spawn "dms" "ipc" "call" "audio" "micmute"; }
+    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title="Volume Mute Toggle" { spawn "dms" "ipc" "call" "audio" "mute"; }
+    XF86AudioNext allow-when-locked=true hotkey-overlay-title="Media: Next Track" repeat=false { spawn "dms" "ipc" "call" "mpris" "next"; }
+    XF86AudioPlay repeat=false allow-when-locked=true hotkey-overlay-title="Media: Play/Pause" { spawn "dms" "ipc" "call" "mpris" "playPause"; }
+    XF86AudioPrev repeat=false allow-when-locked=true hotkey-overlay-title="Media: Previous Track" { spawn "dms" "ipc" "call" "mpris" "previous"; }
+    XF86AudioRaiseVolume allow-when-locked=true hotkey-overlay-title="Volume Up (2%)" { spawn "dms" "ipc" "call" "audio" "increment" "2"; }
+    XF86AudioStop repeat=false allow-when-locked=true hotkey-overlay-title="Media: Stop" { spawn "dms" "ipc" "call" "mpris" "stop"; }
+    XF86MonBrightnessDown allow-when-locked=true hotkey-overlay-title="Brightness Down (2%)" { spawn "dms" "ipc" "call" "brightness" "decrement" "2" ""; }
+    XF86MonBrightnessUp allow-when-locked=true hotkey-overlay-title="Brightness Up (2%)" { spawn "dms" "ipc" "call" "brightness" "increment" "2" ""; }
 }

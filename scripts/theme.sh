@@ -17,14 +17,6 @@ get_theme() {
       config_file="$CONFIG_DIR/bat/config"
       sed -En "s/^--theme-$2=\"(.+)\"$/\1/p" "$config_file"
       ;;
-    ghostty)
-      config_file="$CONFIG_DIR/ghostty/config.ghostty"
-      sed -En "s/^theme = (.+)$/\1/p" "$config_file"
-      ;;
-    kitty)
-      config_file="$CONFIG_DIR/kitty/kitty.conf"
-      sed -En "s/^theme = (.+)$/\1/p" "$config_file"
-      ;;
     windows_terminal)
       config_file="$LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
       sed -En "s/^ {12}\"colorScheme\": \"(.+)\",?$/\1/p" "$config_file"
@@ -46,14 +38,6 @@ set_theme() {
       config_file="$CONFIG_DIR/bat/config"
       sed -Ei --follow-symlinks "s/^--theme-$3=.+$/--theme-$3=\"$2\"/" "$config_file"
       ;;
-    ghostty)
-      config_file="$CONFIG_DIR/ghostty/config.ghostty"
-      sed -Ei --follow-symlinks "s/^theme = .+$/theme = $2/" "$config_file"
-      ;;
-    kitty)
-      config_file="$CONFIG_DIR/kitty/kitty.conf"
-      sed -Ei --follow-symlinks "s/^theme = .+$/theme = $2/" "$config_file"
-      ;;
     windows_terminal)
       config_file="$LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
       sed -Ei --follow-symlinks "s/^( {12}\"colorScheme\": \").+(\",?)$/\1$2\2/" "$config_file"
@@ -67,7 +51,7 @@ set_theme() {
 # $3 light|dark
 preview_theme() {
   case "$1" in
-    alacritty | ghostty | kitty | windows_terminal)
+    alacritty | windows_terminal)
       set_theme "$@"
       "$CONFIG_DIR/alacritty/alacritty-theme/print_colors.sh"
       ;;
@@ -82,6 +66,12 @@ CONFIG_DIR=$HOME/.config
 case "$OSTYPE" in
   cygwin | msys)
     CONFIG_DIR=$APPDATA
+    ;;
+  *)
+    if [ "$1" = windows_terminal ]; then
+      echo "windows_terminal theme is not supported on $OSTYPE" >&2
+      exit
+    fi
     ;;
 esac
 case "$1" in
