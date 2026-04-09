@@ -52,62 +52,66 @@ function Format-Duration {
 }
 
 function Get-PowerShellExecArgs {
-  if ($args[0] -isnot [bool]) {
-    throw "`$args[0] (ExpectingInput) must be a boolean."
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory, Position = 0, ValueFromRemainingArguments)]
+    [System.Object[]]
+    $ArgumentList,
+    [Parameter()]
+    [switch]
+    $ExpectingInput
+  )
+  if (!$ArgumentList) {
+    return $ArgumentList
   }
-  [string[]]$ags = $args[1].ForEach{ $_.Where{ $null -ne $_ } }
-  if (!$ags) {
-    return $ags
-  }
-  if ($args[1][0] -is [scriptblock]) {
-    $ags = 'pwsh', '-nop', '-cwa' + $ags
-    for ($i = 4; $i -lt $ags.Count; $i++) {
-      if ($ags[$i].StartsWith('-')) {
+  if ($ArgumentList[0] -is [scriptblock]) {
+    $ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
+    for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
+      if ($ArgumentList[$i].StartsWith('-')) {
         continue
       }
-      $ags[$i] = "'" + $ags[$i].Replace("'", "''") + "'"
+      $ArgumentList[$i] = "'" + $ArgumentList[$i].Replace("'", "''") + "'"
     }
-    return $ags
+    return $ArgumentList
   }
-  $info = Get-Command $ags[0] -ea Ignore
+  $info = Get-Command $ArgumentList[0] -ea Ignore
   if ($info.CommandType -ceq 'Alias') {
     $info = $info.ResolvedCommand
   }
   while ($true) {
     if (!$info) {
-      if ($ags[0].StartsWith('-')) {
+      if ($ArgumentList[0].StartsWith('-')) {
         break
       }
-      throw [System.Management.Automation.CommandNotFoundException]::new($ags[0])
+      throw [System.Management.Automation.CommandNotFoundException]::new($ArgumentList[0])
     }
     elseif ($info.CommandType -ceq 'Application') {
-      $ags[0] = $info.Source
+      $ArgumentList[0] = $info.Source
       break
     }
     elseif ($info.CommandType -ceq 'ExternalScript') {
-      $ags[0] = $info.Source
-      $ags = 'pwsh', '-nop' + $ags
+      $ArgumentList[0] = $info.Source
+      $ArgumentList = 'pwsh', '-nop' + $ArgumentList
       break
     }
     elseif ($info.Module) {
-      $ags[0] = $info.ModuleName + '\' + $info.Name
-      if ($args[0]) {
-        $ags[0] = '$input|' + $ags[0]
+      $ArgumentList[0] = $info.ModuleName + '\' + $info.Name
+      if ($ExpectingInput) {
+        $ArgumentList[0] = '$input|' + $ArgumentList[0]
       }
-      $ags = 'pwsh', '-nop', '-c' + $ags
-      for ($i = 4; $i -lt $ags.Count; $i++) {
-        if ($ags[$i].StartsWith('-')) {
+      $ArgumentList = 'pwsh', '-nop', '-c' + $ArgumentList
+      for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
+        if ($ArgumentList[$i].StartsWith('-')) {
           continue
         }
-        $ags[$i] = "'" + $ags[$i].Replace("'", "''") + "'"
+        $ArgumentList[$i] = "'" + $ArgumentList[$i].Replace("'", "''") + "'"
       }
       break
     }
     else {
-      $info = Get-Command $ags[0] -CommandType Application, ExternalScript -TotalCount 1 -ea Ignore
+      $info = Get-Command $ArgumentList[0] -CommandType Application, ExternalScript -TotalCount 1 -ea Ignore
     }
   }
-  $ags
 }
 
 function Show-CommandInfo {
@@ -267,8 +271,8 @@ function ee {
 function env {
   $reEnv = [regex]::new('^\w+=')
   $envMap = [Dictionary[string, string]]::new()
-  [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
-  $cmd, $ags = foreach ($arg in $ags) {
+  $ags = $args.ForEach{ $_ }.Where{ $null -ne $_ }
+  $ags = foreach ($arg in $ags) {
     if (!$reEnv.IsMatch($arg)) {
       $arg
       $foreach
@@ -277,7 +281,7 @@ function env {
     $key, $value = $arg.Split('=', 2)
     $envMap[$key] = $value
   }
-  $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
+  $cmd, $ags = Get-PowerShellExecArgs $ags -ExpectingInput:$MyInvocation.ExpectingInput
   $savedEnvMap = [Dictionary[string, string]]::new()
   $envMap.GetEnumerator().ForEach{
     $savedEnvMap[$_.Key] = [System.Environment]::GetEnvironmentVariable($_.Key)
@@ -374,13 +378,24 @@ function prompt {
 }
 
 function sudo {
-  $ags = Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args
-  if ($cmd = (Get-Command sudo -CommandType Application -TotalCount 1 -ea Ignore).Source) {
-    $ags = if ($ags[0] -ceq 'pwsh') {
-      '-E', '--' + $ags
+  $options = @()
+  $ags = $args.ForEach{ $_ }.Where{ $null -ne $_ }
+  $ags = foreach ($arg in $ags) {
+    if ($arg.StartsWith('-')) {
+      $options += $arg
     }
     else {
-      , '--' + $ags
+      $foreach
+      break
+    }
+  }
+  $ags = Get-PowerShellExecArgs $ags -ExpectingInput:$MyInvocation.ExpectingInput
+  if ($cmd = (Get-Command sudo -CommandType Application -TotalCount 1 -ea Ignore).Source) {
+    $ags = if ($ags[0] -ceq 'pwsh') {
+      $options + '-E', '--' + $ags
+    }
+    else {
+      $options + '--' + $ags
     }
     if ($MyInvocation.ExpectingInput) {
       Write-Debug "| $cmd $ags"

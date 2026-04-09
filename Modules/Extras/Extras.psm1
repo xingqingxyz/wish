@@ -163,10 +163,10 @@ function Register-PSScheduledTask {
   if ($IsWindows) {
     $trigger = switch ($Interval) {
       'once' { New-ScheduledTaskTrigger -At $At -Once; break }
-      'daily' { New-ScheduledTaskTrigger -At $At -Daily; break }
-      'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday; break }
-      'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2; break }
-      'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 30; break }
+      'daily' { New-ScheduledTaskTrigger -At $At -Daily -RandomDelay 12:0:0; break }
+      'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -RandomDelay 3:0:0:0; break }
+      'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2 -RandomDelay 7:0:0:0; break }
+      'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 15 -RandomDelay 30:0:0:0; break }
     }
     # HACK: no show cmd window
     $action = New-ScheduledTaskAction -Execute (Get-Command uvw -Type Application -TotalCount 1).Source -Argument "run -- $Command" -WorkingDirectory $WorkingDirectory
@@ -456,6 +456,63 @@ function Get-DarkMode {
     }
   }
   $false
+}
+
+function Set-Wallpaper {
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory, Position = 0)]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $LiteralPath
+  )
+  if ($IsWindows) {
+    $type = Add-Type -Namespace 'Win32' -PassThru '_SystemParametersInfo' @'
+[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+public static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+'@
+    if (!$type::SystemParametersInfo(20, 0, $LiteralPath, 3)) {
+      throw 'api set wallpaper failed'
+    }
+  }
+  elseif ($IsMacOS) {
+    osascript -e @"
+      tell application "System Events"
+        set picturePath to "$($LiteralPath.Replace('"', '\"'))"
+        repeat with d in desktops
+          set picture of d to picturePath
+        end repeat
+      end tell
+"@
+  }
+  elseif ($IsLinux) {
+    if ($env:XDG_CURRENT_DESKTOP -clike '*GNOME') {
+      gsettings set org.gnome.desktop.background picture-uri "file://$LiteralPath"
+      gsettings set org.gnome.desktop.background picture-uri-dark "file://$LiteralPath"
+      gsettings set org.gnome.desktop.screensaver picture-uri "file://$LiteralPath"
+    }
+    elseif ($env:XDG_CURRENT_DESKTOP -clike '*KDE') {
+      qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript @"
+        var allDesktops = desktops();
+        for (i = 0; i < allDesktops.length; i++) {
+          d = allDesktops[i];
+          d.wallpaperPlugin = "org.kde.image";
+          d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
+          d.writeConfig("Image", "file://$($LiteralPath.Replace('"', '\"'))");
+          d.writeConfig("FillMode", 3);
+        }
+"@
+    }
+    elseif (Get-Process dms -ea Ignore) {
+      dms ipc wallpaper set $LiteralPath
+    }
+    else {
+      throw "unknown desktop $env:XDG_CURRENT_DESKTOP"
+    }
+  }
+  else {
+    throw [System.NotImplementedException]::new()
+  }
 }
 
 function Send-Notify {

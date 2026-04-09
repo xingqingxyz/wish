@@ -30,8 +30,6 @@
     {
         "defaults":
         {
-            "autoMarkPrompts": true,
-            "closeOnExit": "automatic",
             "colorScheme": "CGA",
             "showMarksOnScrollbar": true
         },
