@@ -16,7 +16,6 @@ param (
   $LiteralPath
 )
 
-$ErrorActionPreference = 'Stop'
 if ($Path) {
   $LiteralPath = Convert-Path $Path
 }

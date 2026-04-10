@@ -255,6 +255,7 @@ rustup-components:
   - clippy
 rustup-targets:
   - wasm32-unknown-unknown
+snap: []
 ubuntu:
   - alacritty
   - bash

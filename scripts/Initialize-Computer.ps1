@@ -1,4 +1,3 @@
-$ErrorActionPreference = 'Stop'
 # env
 . $PSScriptRoot/Export-EnvrionmentVariables.ps1
 # dotfiles

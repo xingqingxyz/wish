@@ -1,7 +1,5 @@
 using namespace System.Collections.Generic
 
-$ErrorActionPreference = 'Stop'
-
 #region exports
 function Get-MemoryInfo {
   if ($IsWindows) {
@@ -486,9 +484,6 @@ function icat {
     if ($onlyKitty) {
       $input | kitten icat
     }
-    elseif (Get-Command chafa -Type Application -TotalCount 1 -ea Ignore) {
-      $input | chafa -f sixels
-    }
     else {
       $input | magick -density 3000 -background transparent "${Format}:-" -resize "${Size}x" -define sixel:diffuse=true @ArgumentList sixel:- 2>$null
     }
@@ -499,9 +494,6 @@ function icat {
   }
   if ($onlyKitty) {
     kitten icat $LiteralPath
-  }
-  elseif (Get-Command chafa -Type Application -TotalCount 1 -ea Ignore) {
-    chafa $LiteralPath
   }
   else {
     $LiteralPath.ForEach{

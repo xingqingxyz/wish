@@ -27,6 +27,7 @@ if ($PSCulture -cne 'en-US' -and (Get-Content -Raw -LiteralPath ~/.config/user-d
   "$HOME/.local/share/bash-completion/completions"
   "$HOME/.local/share/fonts/truetype"
   "$HOME/.local/share/jar"
+  "$HOME/.local/share/icons/hicolor/scalable/apps"
   1..8 | ForEach-Object { "$HOME/.local/share/man/man$_" }
 )
 New-Item -ItemType Directory $dirs -Force

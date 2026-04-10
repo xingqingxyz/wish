@@ -1,9 +1,7 @@
 #Requires -Modules PowerShellEditorServices.Commands
 
 # preferences
-$ErrorActionPreference = 'Stop'
 $DebugPreference = 'Continue'
-$InformationPreference = 'Continue'
 
 #region defs
 function e.i {

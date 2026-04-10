@@ -65,7 +65,7 @@ function Get-PowerShellExecArgs {
     return $ArgumentList
   }
   if ($ArgumentList[0] -is [scriptblock]) {
-    $ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
+    [string[]]$ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
     for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
       if ($ArgumentList[$i].StartsWith('-')) {
         continue
@@ -74,18 +74,13 @@ function Get-PowerShellExecArgs {
     }
     return $ArgumentList
   }
-  $info = Get-Command $ArgumentList[0] -ea Ignore
+  [string[]]$ArgumentList = $ArgumentList
+  $info = Get-Command $ArgumentList[0]
   if ($info.CommandType -ceq 'Alias') {
     $info = $info.ResolvedCommand
   }
   while ($true) {
-    if (!$info) {
-      if ($ArgumentList[0].StartsWith('-')) {
-        break
-      }
-      throw [System.Management.Automation.CommandNotFoundException]::new($ArgumentList[0])
-    }
-    elseif ($info.CommandType -ceq 'Application') {
+    if ($info.CommandType -ceq 'Application') {
       $ArgumentList[0] = $info.Source
       break
     }
@@ -109,9 +104,10 @@ function Get-PowerShellExecArgs {
       break
     }
     else {
-      $info = Get-Command $ArgumentList[0] -CommandType Application, ExternalScript -TotalCount 1 -ea Ignore
+      $info = Get-Command $ArgumentList[0] -CommandType Application, ExternalScript -TotalCount 1
     }
   }
+  $ArgumentList
 }
 
 function Show-CommandInfo {
@@ -181,10 +177,10 @@ function Show-CommandInfo {
   end {
     if ($MyInvocation.ExpectingInput) {
       if ($Name) {
-        $ArgumentList = @($Name) + $ArgumentList
+        $ArgumentList = , $Name + $ArgumentList
       }
       if ($items) {
-        $items = Get-Item -LiteralPath $items -Force -ea Stop | resolveItem
+        $items = Get-Item -LiteralPath $items -Force | resolveItem
         if (!$items) {
           return
         }
@@ -224,7 +220,7 @@ function Show-CommandInfo {
       else {
         $MyInvocation.MyCommand.Module.Path
       }
-      $ArgumentList = $items ? ($items + $ArgumentList) : @($Name; $ArgumentList)
+      $ArgumentList = ($items ?? , $Name) + $ArgumentList
       Write-Debug "$Editor $ArgumentList"
       return & $Editor $ArgumentList
     }
@@ -252,7 +248,7 @@ function cd.... {
 function ee {
   $cmd = switch -CaseSensitive -Wildcard ($env:TERM_PROGRAM) {
     'vscode*' { ${env:TERM_PRODUCT}?.ToLowerInvariant() ?? $_.Substring(2); break }
-    default { $env:EDITOR; break }
+    default { $env:EDITOR ?? 'edit'; break }
   }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $args"
@@ -267,9 +263,9 @@ function ee {
 function env {
   $reEnv = [regex]::new('^\w+=')
   $envMap = [Dictionary[string, string]]::new()
-  $ags = $args.ForEach{ $_ }.Where{ $null -ne $_ }
+  $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   $ags = foreach ($arg in $ags) {
-    if (!$reEnv.IsMatch($arg)) {
+    if ($arg -isnot [string] -or !$reEnv.IsMatch($arg)) {
       $arg
       $foreach
       break
@@ -310,7 +306,7 @@ function npm {
     (Test-Path deno.json) { 'deno'; break }
     default { 'npm'; break }
   }
-  $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
+  $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
   [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $ags"
@@ -323,17 +319,17 @@ function npm {
 }
 
 function npx {
-  [string]$cmd, [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
-  $cmd = (Get-Command ./node_modules/.bin/$cmd, $cmd -Type Application -TotalCount 1 -ea Ignore)?[0].Source
+  $cmd, $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
+  $cmd = (Get-Command ./node_modules/.bin/$cmd, $cmd -CommandType Application -TotalCount 1 -ea Ignore)?[0].Source
   if (!$cmd) {
     # fallback to handle options
     $cmd, $ags = @(switch ($true) {
-        (Test-Path pnpm-lock.yaml) { 'pnpm', 'dlx'; break }
-        (Test-Path yarn.lock) { 'yarn', 'dlx'; break }
+        (Test-Path -LiteralPath pnpm-lock.yaml) { 'pnpm', 'dlx'; break }
+        (Test-Path -LiteralPath yarn.lock) { 'yarn', 'dlx'; break }
         (Test-Path bun.lock?) { 'bun', 'x'; break }
-        default { 'npx'; break }
-      }) + $args
-    $cmd = (Get-Command $cmd -Type Application -TotalCount 1 -ea Stop).Source
+        default { 'npm', 'exec'; break }
+      }) + $ags
+    $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
   }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $ags"
@@ -375,15 +371,14 @@ function prompt {
 
 function sudo {
   $options = @()
-  $ags = $args.ForEach{ $_ }.Where{ $null -ne $_ }
+  $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   $ags = foreach ($arg in $ags) {
-    if ($arg.StartsWith('-')) {
-      $options += $arg
-    }
-    else {
+    if ($arg -isnot [string] -or !$arg.StartsWith('-')) {
+      $arg
       $foreach
       break
     }
+    $options += $arg
   }
   $ags = Get-PowerShellExecArgs $ags -ExpectingInput:$MyInvocation.ExpectingInput
   if ($cmd = (Get-Command sudo -CommandType Application -TotalCount 1 -ea Ignore).Source) {
@@ -419,6 +414,10 @@ function x {
   .SYNOPSIS
   Open a terminal executing the command with expanded arguments and/or piped input.
    #>
+  $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
+  if (!$ags) {
+    throw 'no command to execute'
+  }
   [string[]]$term = switch ($env:TERM) {
     'alacritty' { $_; break }
     'xterm-ghostty' { 'ghostty'; break }
@@ -433,30 +432,32 @@ function x {
       break
     }
   }
+  [string]$cmd = $ags[0]
   $term = switch ($term[0]) {
     'alacritty' {
       if ($IsWindows) {
-        'conhost', 'alacritty', '--title', $args[0], '-e'
+        'conhost', 'alacritty', '--title', $cmd, '-e'
       }
       elseif (Get-Process alacritty -ea Ignore) {
         # alacritty msg working directory is defined by config or $HOME
-        'alacritty', 'msg', 'create-window', '--working-directory', $ExecutionContext.SessionState.Path. CurrentFileSystemLocation.ProviderPath, '--title', $args[0], '-e'
+        'alacritty', 'msg', 'create-window', '--working-directory', $ExecutionContext.SessionState.Path. CurrentFileSystemLocation.ProviderPath, '--title', $cmd, '-e'
       }
       elseif ($IsMacOS) {
-        'open', '-n', '-a', 'alacritty.app', '--', '--title', $args[0], '-e'
+        'open', '-n', '-a', 'alacritty.app', '--', '--title', $cmd, '-e'
       }
       else {
-        'sh', '-c', 'setsid -f "$0" "$@" > /dev/null 2>&1', 'alacritty', '--title', $args[0], '-e'
+        'sh', '-c', 'setsid -f "$0" "$@" > /dev/null 2>&1', 'alacritty', '--title', $cmd, '-e'
       }
       break
     }
-    'ghostty' { 'ghostty', '+new-window', '--title', $args[0], '-e'; break }
-    'kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $args[0], '--' : 'kitty', '--detach', '--title', $args[0]; '--'; break }
-    'wt' { 'wt', 'nt', '--title', $args[0], '--'; break }
-    'cmd' { 'cmd', '/d', '/c', 'start', ('"' + ([string]$args[0]).Replace('"', '""') + '"'); break }
+    'ghostty' { 'ghostty', '+new-window', '--title', $cmd, '-e'; break }
+    'kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $cmd, '--' : 'kitty', '--detach', '--title', $cmd; '--'; break }
+    'wt' { 'wt', 'nt', '--title', $cmd, '--'; break }
+    'cmd' { 'cmd', '/d', '/c', 'start', ('"' + $cmd.Replace('"', '""') + '"'); break }
     # no default
   }
-  [string[]]$ags = foreach ($cmd in (Get-PowerShellExecArgs $MyInvocation.ExpectingInput $args)) {
+  $ags = Get-PowerShellExecArgs $ags -ExpectingInput:$MyInvocation.ExpectingInput
+  $ags = foreach ($cmd in $ags) {
     switch ([System.IO.Path]::GetFileNameWithoutExtension($cmd)) {
       'aria2c' { $cmd, '-x2', '-j32', '-d', [System.IO.Path]::GetTempPath(), '--allow-overwrite', "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')"; break }
       'msiexec' { 'sudo', '--', $cmd, '/qn', '/norestart', '/log', "${env:TEMP}msiexec.log", '/i'; break }
@@ -548,8 +549,8 @@ filter showHelp ([string[]]$ArgumentList) {
     }
     switch ($item.CommandType) {
       Application {
-        $baseName = Split-Path -LeafBase $item.Name
-        $manCmd = Get-Command man -Type Application -TotalCount 1 -ea Ignore
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($item.Name)
+        $manCmd = Get-Command man -CommandType Application -TotalCount 1 -ea Ignore
         if ($manCmd -and (& $manCmd -w $baseName)) {
           & $manCmd $baseName
           break
@@ -586,7 +587,7 @@ filter showSource ([string[]]$ArgumentList) {
     }
     switch ($item.CommandType) {
       Application {
-        Get-Item -LiteralPath $item.Source -Force -ea Stop | showFile $ArgumentList
+        Get-Item -LiteralPath $item.Source -Force | showFile $ArgumentList
         break
       }
       Cmdlet {
@@ -615,10 +616,10 @@ filter showSource ([string[]]$ArgumentList) {
 filter resolveItem {
   [System.IO.FileSystemInfo]$item = $_
   if ($IsWindows) {
-    (Get-Item -LiteralPath $item.ResolvedTarget -Force -ea Stop) ?? $item
+    (Get-Item -LiteralPath $item.ResolvedTarget -Force) ?? $item
   }
   else {
-    Get-Item -LiteralPath (realpath `-- $item.FullName) -Force -ea Stop
+    Get-Item -LiteralPath (realpath `-- $item.FullName) -Force
   }
 }
 
@@ -671,16 +672,17 @@ filter fileEditable {
 }
 
 filter decompress {
-  $cmd, $ags = @(switch ([System.IO.Path]::GetExtension($_)) {
-      '.gz' { 'gzip', '-dc'; break }
-      '.bz2' { 'bzip2', '-dc'; break }
-      '.lz' { 'lzip', '-dc'; break }
-      '.zst' { 'zstd -dcq'; break }
-      '.br' { 'brotli', '-dc'; break }
-      '.xz' { 'xz', '-dc'; break }
-      '.lzma' { 'xz', '-dc'; break }
-      default { throw [System.NotImplementedException]::new() }
-    }; $_)
+  $ags = switch ([System.IO.Path]::GetExtension($_)) {
+    '.gz' { 'gzip', '-dc'; break }
+    '.bz2' { 'bzip2', '-dc'; break }
+    '.lz' { 'lzip', '-dc'; break }
+    '.zst' { 'zstd', '-dcq'; break }
+    '.br' { 'brotli', '-dc'; break }
+    '.xz' { 'xz', '-dc'; break }
+    '.lzma' { 'xz', '-dc'; break }
+    default { throw [System.NotImplementedException]::new() }
+  }
+  $cmd, $ags = $ags + $_
   & $cmd $ags
 }
 
@@ -689,7 +691,7 @@ filter showDirectory ([string[]]$ArgumentList) {
   $oldValue = $PSStyle.OutputRendering
   $PSStyle.OutputRendering = 'Ansi'
   try {
-    Get-ChildItem -LiteralPath $path -Force -ea Stop | less $ArgumentList
+    Get-ChildItem -LiteralPath $path -Force | less $ArgumentList
   }
   finally {
     $PSStyle.OutputRendering = $oldValue
@@ -697,89 +699,88 @@ filter showDirectory ([string[]]$ArgumentList) {
 }
 
 filter showFile ([string[]]$ArgumentList) {
-  [System.IO.FileInfo]$_
-  [string]$path = $_
-  switch -CaseSensitive -Regex ($path) {
+  switch -CaseSensitive -Regex (([System.IO.FileInfo]$_).FullName) {
     '\.(?:[1-9n]|[1-9]x|man)\.(?:bz2|[glx]z|lzma|zst|br)$' {
-      if (($path | decompress | file -L -).Contains('troff')) {
-        $path | decompress | & ('man') -l - 2>$null | sed 's/\x1b\[[0-9;]*m\|.\x08//g' | bat -plman $ArgumentList
+      if (($_ | decompress | file -L -).Contains('troff')) {
+        $_ | decompress | & ('man') -l - 2>$null | sed 's/\x1b\[[0-9;]*m\|.\x08//g' | bat -plman $ArgumentList
       }
       else {
-        bat -p $path $ArgumentList
+        bat -p $_ $ArgumentList
       }
       break
     }
     '\.(?:[1-9n]|[1-9]x|man)$' {
-      if ((file -L $path).Contains('troff')) {
-        & ('man') -l $path 2>$null | sed 's/\x1b\[[0-9;]*m\|.\x08//g' | bat -plman $ArgumentList
+      if ((file -L $_).Contains('troff')) {
+        & ('man') -l $_ 2>$null | sed 's/\x1b\[[0-9;]*m\|.\x08//g' | bat -plman $ArgumentList
       }
       else {
-        bat -p $path $ArgumentList
+        bat -p $_ $ArgumentList
       }
       break
     }
     '\.(?:tar|tgz|tbz2)$' {
-      tar -tvf $path | less
+      tar -tvf $_ | less
       break
     }
     '\.tar\.(?:bz2|[glx]z|[zZ]|lzma|br)$' {
-      tar -tvf $path | less
+      tar -tvf $_ | less
       break
     }
     '\.tar\.zst$' {
-      tar --zstd -tvf $path | less
+      tar --zstd -tvf $_ | less
       break
     }
     '\.tar\.lz$' {
-      tar --lzip -tvf $path | less
+      tar --lzip -tvf $_ | less
       break
     }
     '\.(?:zip|jar|nbm)$' {
       if ($IsWindows) {
-        tar -tvf $path | less
+        tar -tvf $_ | less
       }
       else {
-        zipinfo $path | less
+        zipinfo $_ | less
       }
       break
     }
     '\.(?:[glx]z|bz2|zst|br|lzma)$' {
-      decompress $path | bat -p --file-name=$(Split-Path -LeafBase $path) $ArgumentList
+      decompress $_ | bat -p --file-name=$([System.IO.Path]::GetFileNameWithoutExtension($_)) $ArgumentList
       break
     }
     '\.deb$' {
-      dpkg-deb -c $path | less
+      dpkg-deb -c $_ | less
       break
     }
     '\.rpm$' {
-      rpm -qpivl --changelog --nomanifest $path | less
+      rpm -qpivl --changelog --nomanifest $_ | less
       break
     }
     '\.7z$' {
-      7z l $path | less
+      7z l $_ | less
       break
     }
     '\.cpio?$' {
-      Get-Content -LiteralPath $path | cpio -itv | less
+      Get-Content -LiteralPath $_ | cpio -itv | less
       break
     }
     '\.gpg$' {
-      gpg -d $path | less
+      gpg -d $_ | less
       break
     }
     '\.(?:gif|jpeg|jpg|pcd|png|tga|tiff|tif)$' {
-      icat $path
+      icat $_
       break
     }
     '\.(md|markdown)$' {
-      glow $path
+      glow $_
       break
     }
     default {
-      switch -CaseSensitive (file -Lb --mime-encoding $path) {
+      $path = $_
+      switch -CaseSensitive (file -Lb --mime-encoding $_) {
         binary { sh -c 'hexyl "$@" | less' `-- $path $ArgumentList <# auto close hexyl pipe #>; break }
         { $_ -ceq $OutputEncoding.WebName -or $_.StartsWith('unknown') } { bat -p $path $ArgumentList; break }
-        default { Get-Content -Encoding ([System.Text.Encoding]::GetEncoding($_)) -LiteralPath $path | bat -p --file-name=$path $ArgumentList; break }
+        default { Get-Content -LiteralPath $path -Encoding ([System.Text.Encoding]::GetEncoding($_)) | bat -p --file-name=$path $ArgumentList; break }
       }
       break
     }

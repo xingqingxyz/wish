@@ -9,13 +9,8 @@ Set-PSReadLineKeyHandler -Chord Ctrl+b -Function BackwardWord
 Set-PSReadLineKeyHandler -Chord Ctrl+d -Function DeleteCharOrExit
 Set-PSReadLineKeyHandler -Chord Ctrl+Delete -Function KillWord
 Set-PSReadLineKeyHandler -Chord Ctrl+f -Function ForwardWord
-Set-PSReadLineKeyHandler -Chord Ctrl+k -Function KillLine
 Set-PSReadLineKeyHandler -Chord Ctrl+u -Function BackwardKillLine
 # custom
-Set-PSReadLineKeyHandler -Chord 'Ctrl+x,Ctrl+e' -Description 'Edit and execute command' -ScriptBlock {
-  [Microsoft.PowerShell.PSConsoleReadLine]::ViEditVisually()
-  [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
-}
 Set-PSReadLineKeyHandler -Chord F1 -Description 'Show command help' -ScriptBlock {
   $cursor = 0
   [System.Management.Automation.Language.Token[]]$tokens = $null
@@ -73,20 +68,6 @@ Set-PSReadLineKeyHandler -Chord Alt+c -Description 'Fzf select sub directories t
   Set-Location -LiteralPath $dir
   [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
 }
-Set-PSReadLineKeyHandler -Chord Alt+C -Description 'Fzf select parent directories to cd' -ScriptBlock {
-  # note: expects "`n" not in path
-  [string]$dir = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
-  [string[]]$dirs = while ($dir) {
-    $dir
-    $dir = [System.IO.Path]::GetDirectoryName($dir)
-  }
-  $dir = $dirs | fzf --scheme=path
-  if (!$dir) {
-    return
-  }
-  Set-Location -LiteralPath $dir
-  [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
-}
 Set-PSReadLineKeyHandler -Chord Alt+S -Description 'Fzf select stared repo name to insert' -ScriptBlock {
   $repo = Get-Content -LiteralPath $env:WISH_ROOT/scripts/data/stars.txt | fzf --scheme=path
   if (!$repo) {
@@ -101,25 +82,6 @@ Set-PSReadLineKeyHandler -Chord Alt+z -Description 'Fzf select z paths to cd' -S
   }
   Invoke-Z $dir
   [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
-}
-Set-PSReadLineKeyHandler -Chord Alt+d -Description 'Execute current command as delayed background job' -ScriptBlock {
-  $text = ''
-  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$text, [ref]$null)
-  [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $text.Length, "delay 0:12 $text &")
-  [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
-}
-Set-PSReadLineKeyHandler -Chord Alt+s -Description 'Add sudo to command line and accept it' -ScriptBlock {
-  [System.Management.Automation.Language.Ast]$ast = $null
-  [System.Management.Automation.Language.Token[]]$tokens = $null
-  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$null, [ref]$null)
-  $text = $ast.ToString()
-  if (@($tokens.Where{ $_.TokenFlags -ceq 'CommandName' }).Count -eq 1) {
-    [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $text.Length, "sudo $text")
-  }
-  else {
-    [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $text.Length, "sudo {$text}")
-  }
-  [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
 }
 Set-PSReadLineKeyHandler -Chord Alt+v -Description 'Toggle .venv environment' -ScriptBlock {
   $pythonVenvActivate = Test-Path -LiteralPath .venv/
@@ -147,12 +109,27 @@ Set-PSReadLineKeyHandler -Chord Alt+v -Description 'Toggle .venv environment' -S
     }
   }
 }
-Set-PSReadLineKeyHandler -Chord Alt+e -Description 'Eval command line and replace it, except blanks' -ScriptBlock {
-  $text = ''
-  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$text, [ref]$null)
-  if ([string]::IsNullOrWhiteSpace($text)) {
-    return
+$cmd = {
+  [System.Management.Automation.Language.Ast]$ast = $null
+  [System.Management.Automation.Language.Token[]]$tokens = $null
+  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$null, [ref]$null)
+  $text = if ($tokens.Where{ $_.TokenFlags -ceq 'CommandName' }.Count -eq 1) {
+    $i = $tokens[0].Kind -ceq 'Dot' -or $tokens[0].Kind -ceq 'Ampersand' ? $tokens[1].Extent.StartOffset : 0
+    $ast.ToString().Substring($i)
   }
-  [string]$result = Invoke-Expression $text
-  [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $text.Length, $result)
+  else {
+    "{$ast}"
+  }
+  $text = $(switch ($args[0].KeyChar) {
+      'd' { 'delay 0:12 {0} &'; break }
+      's' { 'sudo {0}'; break }
+      'x' { 'x {0}'; break }
+      default { '& {0}'; break }
+    }) -f $text
+  [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $ast.Extent.EndOffset, $text)
+  [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
 }
+Set-PSReadLineKeyHandler -Chord Alt+d -Description 'Add delay & to command line and accept it' -ScriptBlock $cmd
+Set-PSReadLineKeyHandler -Chord Alt+s -Description 'Add sudo to command line and accept it' -ScriptBlock $cmd
+Set-PSReadLineKeyHandler -Chord Alt+x -Description 'Add x to command line and accept it' -ScriptBlock $cmd
+Remove-Variable cmd

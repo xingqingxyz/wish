@@ -1,8 +1,5 @@
 using namespace System.Runtime.InteropServices
 
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $true
-
 #region exports
 function Update-Release {
   [CmdletBinding()]
@@ -107,10 +104,7 @@ function Update-Software {
     }
     bun {
       if ($Global) {
-        $PSNativeCommandUseErrorActionPreference = $false
-        # this exits with code 1 while nothing to update
         bun update -g --latest
-        $PSNativeCommandUseErrorActionPreference = $true
         if ($Force -and $pkgs) {
           bun add -g --trust --omit=optional $pkgs
         }
@@ -310,10 +304,10 @@ function Update-System ([switch]$Force) {
   }
   elseif ($IsLinux) {
     if ($PSVersionTable.OS.StartsWith('Ubuntu ')) {
-      Update-Software apt, ubuntu -Force:$Force
+      Update-Software apt, flatpak, snap, ubuntu -Force:$Force
     }
     elseif ($PSVersionTable.OS.StartsWith('Fedora ')) {
-      Update-Software dnf, fedora -Force:$Force
+      Update-Software dnf, flatpak, fedora -Force:$Force
     }
     elseif ($PSVersionTable.OS.StartsWith('Debian ') -and
       [RuntimeInformation]::OSArchitecture -eq [Architecture]::Arm64) {
@@ -495,7 +489,7 @@ function Get-LocalVersion ([string]$Name) {
     [regex]::Match($line, '\d+\.\d+(?:\.\d+(?:-\d+)?|)').Value.Replace('-', '.')
   }
   catch {
-    Write-Warning "cannot detect local version for $($Name)"
+    Write-Warning "cannot detect local version for $Name"
     '0.0.0'
   }
 }
@@ -625,8 +619,8 @@ function Install-Release {
       Move-Item -LiteralPath $buildDir/alacritty.5.gz, $buildDir/alacritty-bindings.5.gz $dataDir/man/man5 -Force
       Move-Item -LiteralPath $buildDir/alacritty.bash $dataDir/bash-completion/completions -Force
       Move-Item -LiteralPath $buildDir/Alacritty.desktop $dataDir/applications -Force
+      Move-Item -LiteralPath $buildDir/Alacritty.svg $dataDir/icons/hicolor/scalable/apps/Alacritty.svg -Force
       update-desktop-database $dataDir/applications
-      sudo mv $buildDir/Alacritty.svg /usr/share/pixmaps
       break
     }
     balenaEtcher {
@@ -637,7 +631,7 @@ function Install-Release {
           sudo dnf install -y $buildDir/$file
           break
         }
-        $IsUbuntu {
+        ($IsUbuntu -or $IsRaspi) {
           $file = "balena-etcher_$($Meta.version)_amd64.deb"
           Invoke-ReleaseDownload $Meta $file
           sudo dpkg -i $buildDir/$file
@@ -663,14 +657,6 @@ function Install-Release {
       finally {
         Pop-Location
       }
-      break
-    }
-    { $_ -ceq 'bat' -or $_ -ceq 'diskus' -or $_ -ceq 'fd' -or $_ -ceq 'hexyl' -or $_ -ceq 'hyperfine' } {
-      $base = $_, $Meta.tag, $rust.target -join '-'
-      Invoke-ReleaseDownload $Meta $base$ext
-      tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
-      Move-Item -LiteralPath $buildDir/$_$exe $binDir -Force
-      Move-Item -LiteralPath $buildDir/$_.1 $dataDir/man/man1 -Force
       break
     }
     binaryen {
@@ -749,34 +735,6 @@ function Install-Release {
         ($IsUbuntu -or $IsRaspi) { sudo dpkg -i $buildDir/$file; break }
       }
       cosign verify-blob $buildDir/$file --bundle $buildDir/$file.sigstore.json --certificate-identity 'keyless@projectsigstore.iam.gserviceaccount.com' --certificate-oidc-issuer 'https://accounts.google.com'
-      break
-    }
-    { $_ -ceq 'crush' -or $_ -ceq 'glow' -or $_ -ceq 'gum' -or $_ -ceq 'vhs' } {
-      $os = switch ($true) {
-        $IsWindows { 'Windows'; break }
-        $IsLinux { 'Linux'; break }
-        $IsMacOS { 'Darwin'; break }
-        default { throw [System.NotImplementedException]::new() }
-      }
-      $arch = switch ([RuntimeInformation]::OSArchitecture) {
-        'Arm64' { 'arm64'; break }
-        'X64' { 'x86_64'; break }
-        default { throw [System.NotImplementedException]::new() }
-      }
-      $base = $_, $Meta.version, $os, $arch -join '_'
-      if ($_ -ceq 'gum') {
-        Invoke-ReleaseDownload $Meta $base$ext, checksums.txt, checksums.txt.pem, checksums.txt.sig
-        cosign verify-blob $buildDir/checksums.txt --cert $buildDir/checksums.txt.pem --signature $buildDir/checksums.txt.sig --certificate-identity 'https://github.com/charmbracelet/meta/.github/workflows/goreleaser.yml@refs/heads/main' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-      }
-      else {
-        Invoke-ReleaseDownload $Meta $base$ext, checksums.txt, checksums.txt.sigstore.json
-        cosign verify-blob $buildDir/checksums.txt --bundle $buildDir/checksums.txt.sigstore.json --certificate-identity 'https://github.com/charmbracelet/meta/.github/workflows/goreleaser.yml@refs/heads/main' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-      }
-      Assert-FileHash $base$ext checksums.txt
-      tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
-      Move-Item -LiteralPath $buildDir/$_$exe $binDir -Force
-      Move-Item -LiteralPath $buildDir/completions/$_.bash $dataDir/bash-completion/completions -Force
-      Move-Item -LiteralPath $buildDir/manpages/$_.1.gz $dataDir/man/man1 -Force
       break
     }
     deno {
@@ -1047,12 +1005,6 @@ StartupWMClass=localsend_app
       chmod +x $binDir/magick
       break
     }
-    { $_ -ceq 'mdbook' -or $_ -ceq 'mdbook-mermaid' } {
-      $base = $_, $Meta.tag, $rust.target -join '-'
-      Invoke-ReleaseDownload $Meta $base$ext
-      tar -xf $buildDir/$base$ext -C $binDir
-      break
-    }
     mkcert {
       $file = 'mkcert-{0}-{1}-{2}{3}' -f $Meta.tag, $go.os, $go.arch, $exe
       Invoke-ReleaseDownload $Meta $file
@@ -1109,7 +1061,7 @@ StartupWMClass=localsend_app
         $IsLinux {
           $root = "$prefixDir/nodejs/$($Meta.tag)"
           tar -xf $buildDir/$file -C (New-EmptyDir $root) --strip-components=1
-          Install-Binary $root/bin/node, $root/bin/npm
+          Install-Binary $root/bin/node, $root/bin/npm, $root/bin/npx
           break
         }
       }
@@ -1331,6 +1283,48 @@ StartupWMClass=localsend_app
         throw [System.NotImplementedException]::new()
       }
       curl -f 'https://zed.dev/install.sh' | sh
+      break
+    }
+    { $_ -ceq 'bat' -or $_ -ceq 'diskus' -or $_ -ceq 'fd' -or $_ -ceq 'hexyl' -or $_ -ceq 'hyperfine' } {
+      $base = $_, $Meta.tag, $rust.target -join '-'
+      Invoke-ReleaseDownload $Meta $base$ext
+      tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
+      Move-Item -LiteralPath $buildDir/$_$exe $binDir -Force
+      Move-Item -LiteralPath $buildDir/$_.1 $dataDir/man/man1 -Force
+      break
+    }
+    { $_ -ceq 'crush' -or $_ -ceq 'glow' -or $_ -ceq 'gum' -or $_ -ceq 'vhs' } {
+      $os = switch ($true) {
+        $IsWindows { 'Windows'; break }
+        $IsLinux { 'Linux'; break }
+        $IsMacOS { 'Darwin'; break }
+        default { throw [System.NotImplementedException]::new() }
+      }
+      $arch = switch ([RuntimeInformation]::OSArchitecture) {
+        'Arm64' { 'arm64'; break }
+        'X64' { 'x86_64'; break }
+        default { throw [System.NotImplementedException]::new() }
+      }
+      $base = $_, $Meta.version, $os, $arch -join '_'
+      if ($_ -ceq 'gum') {
+        Invoke-ReleaseDownload $Meta $base$ext, checksums.txt, checksums.txt.pem, checksums.txt.sig
+        cosign verify-blob $buildDir/checksums.txt --cert $buildDir/checksums.txt.pem --signature $buildDir/checksums.txt.sig --certificate-identity 'https://github.com/charmbracelet/meta/.github/workflows/goreleaser.yml@refs/heads/main' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+      }
+      else {
+        Invoke-ReleaseDownload $Meta $base$ext, checksums.txt, checksums.txt.sigstore.json
+        cosign verify-blob $buildDir/checksums.txt --bundle $buildDir/checksums.txt.sigstore.json --certificate-identity 'https://github.com/charmbracelet/meta/.github/workflows/goreleaser.yml@refs/heads/main' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+      }
+      Assert-FileHash $base$ext checksums.txt
+      tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
+      Move-Item -LiteralPath $buildDir/$_$exe $binDir -Force
+      Move-Item -LiteralPath $buildDir/completions/$_.bash $dataDir/bash-completion/completions -Force
+      Move-Item -LiteralPath $buildDir/manpages/$_.1.gz $dataDir/man/man1 -Force
+      break
+    }
+    { $_ -ceq 'mdbook' -or $_ -ceq 'mdbook-mermaid' } {
+      $base = $_, $Meta.tag, $rust.target -join '-'
+      Invoke-ReleaseDownload $Meta $base$ext
+      tar -xf $buildDir/$base$ext -C $binDir
       break
     }
     { $_ -ceq 'uv' -or $_ -ceq 'ruff' -or $_ -ceq 'ty' } {

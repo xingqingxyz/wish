@@ -8,9 +8,6 @@ param (
   $OnlyDesktop
 )
 
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $true
-
 if ($Off -ne (Get-DarkMode)) {
   return Write-Warning 'dark mode is already set'
 }

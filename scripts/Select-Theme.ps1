@@ -19,9 +19,6 @@ param (
     else { 'bat' })
 )
 
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $true
-
 $mode = (Get-DarkMode) ? 'dark' : 'light'
 $oldTheme = bash $PSScriptRoot/theme.sh get $AppName $mode
 $themes = switch ($AppName) {

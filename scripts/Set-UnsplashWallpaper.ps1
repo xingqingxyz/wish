@@ -1,5 +1,3 @@
-$ErrorActionPreference = 'Stop'
-
 $WALLPAPER_DIR = [System.IO.Path]::Join([System.Environment]::GetFolderPath('MyPictures'), 'unsplash_wallpapers')
 
 function Save-RandomUnsplash {

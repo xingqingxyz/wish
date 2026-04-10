@@ -1,6 +1,3 @@
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $true
-
 #region exports
 function Get-GithubRepositoryBlob {
   [CmdletBinding()]
@@ -225,7 +222,7 @@ WantedBy=timers.target
       $service > ~/.config/systemd/user/$Name.service
       $timer > ~/.config/systemd/user/$Name.timer
     }
-    $ags = @(if (!$AsAdmin) { '-u', $env:USER }; 'systemctl') + $ags
+    $ags = @(if (!$AsAdmin) { "-u$env:USER" }; 'systemctl'; $ags)
     sudo $ags daemon-reload
     sudo $ags enable --now $Name`.timer
   }

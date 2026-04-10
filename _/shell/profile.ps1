@@ -1,4 +1,7 @@
 #Requires -Version 7.6
+$DebugPreference = 'Continue'
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
 
 #region common
 $root = [System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $PSCommandPath).ResolvedTarget)

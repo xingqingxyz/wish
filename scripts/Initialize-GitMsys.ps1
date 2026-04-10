@@ -13,8 +13,6 @@ param (
   $Go
 )
 
-$ErrorActionPreference = 'Stop'
-
 if ($All) {
   if (!$IsWindows) {
     throw [System.NotImplementedException]::new()

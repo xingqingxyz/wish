@@ -7,7 +7,7 @@ param (
   [switch]
   $Force
 )
-$ErrorActionPreference = 'Stop'
+
 $configDir = switch ($true) {
   $IsWindows { $env:APPDATA; break }
   $IsMacOS { "$HOME/Library/Application Support"; break }
