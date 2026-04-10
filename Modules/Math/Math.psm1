@@ -4,10 +4,13 @@ function hex {
   param (
     [Parameter()]
     [switch]
-    $NoPrefix
+    $NoPrefix,
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Object]
+    $InputObject
   )
-  @($input; $args).ForEach{
-    $value = $_
+  process {
+    $value = $InputObject
     $value = if ($value -is [string]) {
       try {
         if ($value.StartsWith('-')) {

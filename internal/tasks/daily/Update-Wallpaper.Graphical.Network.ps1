@@ -34,7 +34,7 @@ if (Test-Path -LiteralPath $wallpaperPath) {
 else {
   try {
     Write-Information "开始下载壁纸: $wallpaperUrl"
-    Invoke-WebRequest -Uri $wallpaperUrl -OutFile $wallpaperPath -TimeoutSec 30
+    Invoke-RestMethod -Uri $wallpaperUrl -OutFile $wallpaperPath -TimeoutSec 30
     Write-Information "壁纸下载完成: $wallpaperPath"
   }
   catch {
@@ -43,63 +43,4 @@ else {
 }
 
 # 设置壁纸
-try {
-  if ($IsWindows) {
-    $type = Add-Type -Namespace 'Win32' -PassThru '_SystemParametersInfo' @'
-[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-public static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-'@
-    if (!$type::SystemParametersInfo(20, 0, $wallpaperPath, 3)) {
-      throw 'api set wallpaper failed'
-    }
-  }
-  elseif ($IsMacOS) {
-    # AppleScript 设置桌面壁纸，支持多显示器
-    osascript -e @"
-      tell application "System Events"
-        set picturePath to "$($wallpaperPath.Replace('"', '\"'))"
-        repeat with d in desktops
-          set picture of d to picturePath
-        end repeat
-      end tell
-"@
-  }
-  elseif ($IsLinux) {
-    if ($env:XDG_CURRENT_DESKTOP -clike '*GNOME') {
-      Write-Information '检测到 GNOME 桌面，设置 gsettings...'
-      gsettings set org.gnome.desktop.background picture-uri "file://$wallpaperPath"
-      gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaperPath"
-      gsettings set org.gnome.desktop.screensaver picture-uri "file://$wallpaperPath"
-    }
-    elseif ($env:XDG_CURRENT_DESKTOP -clike '*KDE') {
-      Write-Information '检测到 KDE Plasma 桌面，设置 Plasma 壁纸...'
-      qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript @"
-        var allDesktops = desktops();
-        for (i = 0; i < allDesktops.length; i++) {
-          d = allDesktops[i];
-          d.wallpaperPlugin = "org.kde.image";
-          d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
-          d.writeConfig("Image", "file://$($wallpaperPath.Replace('"', '\"'))");
-          d.writeConfig("FillMode", 3);
-        }
-"@
-    }
-    elseif (Get-Process dms -ea Ignore) {
-      Write-Information '检测到 dms 桌面, 设置 dms...'
-      dms ipc wallpaper set $wallpaperPath
-    }
-    else {
-      throw "unknown desktop '$env:XDG_CURRENT_DESKTOP'"
-    }
-  }
-  else {
-    throw [System.NotImplementedException]::new('不支持的操作系统')
-  }
-  Write-Information "成功设置壁纸: $wallpaperPath"
-}
-catch [System.Management.Automation.CommandNotFoundException] {
-  Write-Error "未找到命令，请确保正确安装并加入 PATH: $_"
-}
-catch {
-  Write-Error "设置壁纸失败: $_"
-}
+Set-Wallpaper $wallpaperPath
