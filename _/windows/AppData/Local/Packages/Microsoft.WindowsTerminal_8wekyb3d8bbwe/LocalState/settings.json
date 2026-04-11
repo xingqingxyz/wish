@@ -30,6 +30,7 @@
     {
         "defaults":
         {
+            "closeOnExit": "always",
             "colorScheme": "CGA",
             "showMarksOnScrollbar": true
         },

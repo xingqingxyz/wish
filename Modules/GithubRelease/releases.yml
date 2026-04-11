@@ -63,8 +63,8 @@
   sha256: 68f51b1bb3728d3be5a756f23a38af1f776e05c0729dd3a91d3dcf2c20d78138
 - name: fzf
   repo: junegunn/fzf
-  tag: v0.70.0
-  version: 0.70.0
+  tag: v0.71.0
+  version: 0.71.0
 - name: gh
   repo: cli/cli
   tag: v2.87.3

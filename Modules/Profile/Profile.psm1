@@ -426,7 +426,8 @@ function x {
       if ($env:ALACRITTY_LOG) { 'alacritty' }
       elseif ($env:GHOSTTY_BIN_DIR) { 'ghostty' }
       elseif ($env:KITTY_PID) { 'kitty' }
-      elseif ($env:WT_SESSION -or (Get-Command wt -CommandType Application -TotalCount 1 -ea Ignore)) { 'wt' }
+      # for wsl compatibility, check wt.exe to prefer wt
+      elseif ($env:WT_SESSION -or (Get-Command wt.exe -CommandType Application -TotalCount 1 -ea Ignore)) { 'wt' }
       elseif ($IsWindows) { 'cmd' }
       else { throw 'terminal not found' }
       break
@@ -452,7 +453,7 @@ function x {
     }
     'ghostty' { 'ghostty', '+new-window', '--title', $cmd, '-e'; break }
     'kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $cmd, '--' : 'kitty', '--detach', '--title', $cmd; '--'; break }
-    'wt' { 'wt', 'nt', '--title', $cmd, '--'; break }
+    'wt' { 'wt.exe', 'nt', '-d', $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath, '--title', $cmd, '--'; break }
     'cmd' { 'cmd', '/d', '/c', 'start', ('"' + $cmd.Replace('"', '""') + '"'); break }
     # no default
   }
@@ -484,6 +485,10 @@ function x {
     $clean = $IsWindows ? 'break' : ':'
   }
   $cmd, $ags = if ($IsWindows) {
+    if ($term[0] -ceq 'wt.exe') {
+      # wt cmdline parsing is weird, escape ; to avoid splitting args
+      $ags = $ags.Replace(';', '\;')
+    }
     $term + 'cmd', '/v:on', '/d', '/c', (@"
 @echo off &
 for /l %_ in () do (

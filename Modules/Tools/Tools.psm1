@@ -284,7 +284,7 @@ function Set-EnvironmentVariable {
     throw [System.NotImplementedException]::new()
   }
   elseif ($IsLinux) {
-    $envFilePath = $Scope -ceq 'Machine' ? '/etc/profile.d/sh.local' : "$HOME/.env"
+    $envFilePath = $Scope -ceq 'Machine' ? '/etc/.env' : "$HOME/.env"
     $savedEnvironment = $envMap
     $envMap = [Dictionary[string, string]]::new()
     Get-Region "${Scope}Env" $envFilePath | ForEach-Object {

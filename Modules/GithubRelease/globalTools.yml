@@ -133,6 +133,7 @@ dnf-wsl:
   - gcc
   - gdb
   - gh
+  - git-delta
   - git-subtree
   - glibc-langpack-zh
   - hyperfine

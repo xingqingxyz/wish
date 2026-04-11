@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 
-Get-ChildItem -LiteralPath $PSScriptRoot/../internal/tasks -Force -ea Stop | ForEach-Object {
+Get-ChildItem -LiteralPath $PSScriptRoot/tasks -Force -ea Stop | ForEach-Object {
   if ($_.Attributes.HasFlag([System.IO.FileAttributes]::Directory)) {
     $dir = $_
     $_.GetFiles().ForEach{
