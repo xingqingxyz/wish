@@ -32,6 +32,9 @@ if ($Install) {
     if ($path.Length -eq $_.Length) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
     }
+    # remove existing file or link
+    Remove-Item -LiteralPath $path -ea Ignore
+    # copy the content directly
     Copy-Item -LiteralPath $_ (New-Item $path -Force) -Force
     New-Item -ItemType SymbolicLink -Force -Target $path $_
   }

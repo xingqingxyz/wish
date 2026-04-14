@@ -1,4 +1,5 @@
 apt:
+  - alacritty
   - apt-file
   - aria2
   - build-essential
@@ -12,6 +13,7 @@ apt:
   - fcitx5-chinese-addons
   - fonts-jetbrains-mono
   - gcc
+  - git-delta
   - gnome-browser-connector
   - graphviz
   - imagemagick
@@ -22,7 +24,6 @@ apt:
   - lld-22
   - lldb-22
   - mesa-utils
-  - nginx
   - ninja-build
   - openjdk-25-jdk
   - pandoc
@@ -38,18 +39,16 @@ apt-raspi:
   - cmake
   - curl
   - gcc
+  - git-delta
   - libncurses-dev
   - libpcre2-dev
   - libssl-dev
-  - nginx
   - ninja-build
-  - pandoc
   - shellcheck
   - shfmt
   - vlc
   - wget
   - xclip
-  - xsel
 apt-wsl:
   - build-essential
   - cmake
@@ -71,7 +70,6 @@ brew-cask:
   - vs-code
   - xcode
 bun:
-  - '@qoder-ai/qodercli'
   - '@qwen-code/qwen-code'
   - '@tencent-ai/codebuddy-code'
   - '@vscode/vsce'
@@ -96,10 +94,10 @@ dnf:
   - fcitx5-chinese-addons
   - fd-find
   - ffmpeg-free
-  - figlet
   - gcc
   - gdb
   - gh
+  - git-delta
   - git-subtree
   - gnome-browser-connector
   - graphviz
@@ -108,7 +106,6 @@ dnf:
   - jetbrains-mono-fonts
   - lldb
   - msedit
-  - nginx
   - ninja-build
   - openssl-devel
   - pandoc
@@ -129,7 +126,6 @@ dnf-wsl:
   - dictd
   - docker-cli
   - fd-find
-  - figlet
   - gcc
   - gdb
   - gh
@@ -160,6 +156,7 @@ fedora:
   - go
   - golangci-lint
   - hexyl
+  - jd
   - jq
   - mkcert
   - mdbook
@@ -215,7 +212,6 @@ npm: []
 pnpm: []
 ps1: []
 psm1:
-  - AudioDeviceCmdlets
   - Pester
   - PSScriptAnalyzer
   - PSToml
@@ -237,6 +233,7 @@ raspi:
   - golangci-lint
   - hexyl
   - hyperfine
+  - jd
   - jq
   - mkcert
   - node
@@ -258,7 +255,6 @@ rustup-targets:
   - wasm32-unknown-unknown
 snap: []
 ubuntu:
-  - alacritty
   - bash
   - bat
   - bun
@@ -278,6 +274,7 @@ ubuntu:
   - hexyl
   - hyperfine
   - java
+  - jd
   - jq
   - less
   - magick
@@ -329,7 +326,6 @@ winget:
   - Google.AndroidStudio
   - gstreamerproject.gstreamer
   - Gyan.FFmpeg
-  - hpjansson.Chafa
   - ImageMagick.Q16-HDRI
   - JohnMacFarlane.Pandoc
   - josephburnett.jd
@@ -337,24 +333,20 @@ winget:
   - junegunn.fzf
   - Kingsoft.WPSOffice.CN
   - koalaman.shellcheck
-  - LLVM.LLVM
-  - LocalSend.LocalSend
   - Meta.Zstandard
   - Microsoft.Edge
   - Microsoft.PowerShell
   - Microsoft.VisualStudio.Community
   - Microsoft.VisualStudioCode
-  - Microsoft.WindowsTerminal.Preview
+  - Microsoft.WindowsTerminal
   - Microsoft.WSL
   - MikeFarah.yq
   - Mozilla.Firefox.zh-CN
   - mvdan.shfmt
-  - nginxinc.nginx
   - OpenJS.NodeJS
   - Oracle.JDK.25
   - Oven-sh.Bun
   - Rustlang.Rustup
-  - SagerNet.sing-box
   - sharkdp.bat
   - sharkdp.fd
   - sharkdp.hexyl

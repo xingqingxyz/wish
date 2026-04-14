@@ -7,6 +7,6 @@
   "light": {
     "alacritty": "github_light_default",
     "bat": "GitHub",
-    "windows_terminal": "CGA"
+    "windows_terminal": "VSCode Light Modern"
   }
 }

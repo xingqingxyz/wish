@@ -32,15 +32,15 @@ Register-ArgumentCompleter -Native -CommandName code, code-insiders, cursor, qod
           '--sync' { 'on', 'off'; break }
           '--locale' { 'en-US', 'zh-CN', 'zh-TW'; break }
           '--log' { 'critical', 'error', 'warn', 'info', 'debug', 'trace', 'off'; break }
-          '--profile' { 'lldb', 'gc', 'flutter', 'java'; break }
+          '--profile' { 'flutter', 'gc', 'java', 'lldb'; break }
           '--category' {
             'builtin', 'deprecated', 'disabled', 'enabled', 'featured', 'installed', 'popular', 'recentlyPublished', 'recommended', 'updates', 'workspaceUnsupported', 'ext:', 'id:', 'tag:', 'sort:installs', 'sort:name', 'sort:publishedDate', 'sort:rating', 'sort:updateDate'
-            @('ai', 'azure', 'chat', 'data science', 'debuggers', 'education', 'extension packs', 'formatters', 'keymaps', 'language packs', 'linters', 'notebooks', 'machine learning', 'others', 'programming languages', 'scm providers', 'snippets', 'testing', 'themes', 'visualization').ForEach{ "category:`"$_`"" }
+            ('ai', 'azure', 'chat', 'data science', 'debuggers', 'education', 'extension packs', 'formatters', 'keymaps', 'language packs', 'linters', 'notebooks', 'machine learning', 'others', 'programming languages', 'scm providers', 'snippets', 'testing', 'themes', 'visualization').ForEach{ "category:`"$_`"" }
             break
           }
           '--locate-shell-integration-path' { 'bash', 'pwsh', 'zsh', 'fish'; break }
-          { @('--inspect-extensions', '--inspect-brk-extensions').Contains($_) } { '9037', '5000'; break }
-          { @('--disable-extension', '--install-extension', '--uninstall-extension', '--enable-proposed-api').Contains($_) } {
+          { ('--inspect-extensions', '--inspect-brk-extensions').Contains($_) } { '9037', '5000'; break }
+          { ('--disable-extension', '--install-extension', '--uninstall-extension', '--enable-proposed-api').Contains($_) } {
             & (Split-Path -LeafBase $commandAst.GetCommandName()) --list-extensions
             break
           }

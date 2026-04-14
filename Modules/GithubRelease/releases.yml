@@ -20,8 +20,8 @@
   tag: bun-v1.3.11
 - name: cargo-generate
   repo: cargo-generate/cargo-generate
-  tag: v0.23.7
-  version: 0.23.7
+  tag: v0.23.8
+  version: 0.23.8
 - name: code
   repo: microsoft/vscode
   version: 1.115.0
@@ -58,9 +58,9 @@
 - name: fd
   repo: sharkdp/fd
 - name: flutter
-  version: 3.41.1
-  file: https://storage.flutter-io.cn/flutter_infra_release/releases/stable/linux/flutter_linux_3.41.1-stable.tar.xz
-  sha256: 68f51b1bb3728d3be5a756f23a38af1f776e05c0729dd3a91d3dcf2c20d78138
+  version: 3.41.6
+  file: https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.41.6-stable.zip
+  sha256: e30303d47ab13c17e0388303ade1a8a24bfe5698b4a28494e6cbee25fc073022
 - name: fzf
   repo: junegunn/fzf
   tag: v0.71.0
@@ -85,8 +85,8 @@
   file: go1.26.1.linux-amd64.tar.gz
 - name: golangci-lint
   repo: golangci/golangci-lint
-  tag: v2.11.3
-  version: 2.11.3
+  tag: v2.11.4
+  version: 2.11.4
 - name: goreleaser
   repo: goreleaser/goreleaser
   tag: v2.12.5
@@ -95,6 +95,8 @@
   repo: charmbracelet/gum
 - name: gswin64c
   repo: ArtifexSoftware/ghostpdl-downloads
+  tag: gs10070
+  version: 10.07.0
 - name: hexyl
   repo: sharkdp/hexyl
   tag: v0.17.0

@@ -345,7 +345,7 @@ function Set-Region {
     $LiteralPath,
     [Parameter(ParameterSetName = 'LiteralPath')]
     [switch]
-    $Inplace,
+    $Force,
     [Parameter()]
     [ValidateNotNullOrEmpty()]
     [string]
@@ -354,7 +354,13 @@ function Set-Region {
     [System.Object]
     $InputObject
   )
-  [string[]]$lines = $MyInvocation.ExpectingInput ? $input : (Get-Content -LiteralPath $LiteralPath -ea Ignore)
+  if ($LiteralPath -and !(Test-Path -LiteralPath $LiteralPath -PathType Leaf)) {
+    if (!$Force) {
+      return Write-Error "file $LiteralPath not found"
+    }
+    New-Item $LiteralPath -Force
+  }
+  [string[]]$lines = $MyInvocation.ExpectingInput ? $input : (Get-Content -LiteralPath $LiteralPath)
   $found = 0
   $newLines = $lines.ForEach{
     if (!$found -and $_.Trim() -ceq "$LineComment#region $Name") {
@@ -383,7 +389,7 @@ function Set-Region {
       "$LineComment#endregion"
     )
   }
-  if ($Inplace) {
+  if ($LiteralPath) {
     $newLines > $LiteralPath
   }
   else {

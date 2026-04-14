@@ -279,7 +279,8 @@ function Update-Software {
         Write-Warning 'calling winget on non-Windows platform'
         continue
       }
-      sudo winget upgrade -r --accept-package-agreements
+      $ags = @(if ($Force) { '--include-pinned' })
+      sudo winget upgrade -r --accept-package-agreements $ags
       if ($Force -and $pkgs) {
         sudo winget install --accept-package-agreements $pkgs
       }

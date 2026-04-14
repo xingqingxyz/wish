@@ -15,7 +15,7 @@ Set-PSReadLineKeyHandler -Chord F1 -Description 'Show command help' -ScriptBlock
   $cursor = 0
   [System.Management.Automation.Language.Token[]]$tokens = $null
   [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$tokens, [ref]$null, [ref]$cursor)
-  [string]$name = $tokens.Where{ $_.TokenFlags -ceq 'CommandName' -and $_.Extent.StartOffset -le $cursor }[-1].Text
+  [string]$name = $tokens.Where({ $_.TokenFlags -ceq 'CommandName' -and $_.Extent.StartOffset -le $cursor }, 'Last', 1)
   if (!$name) {
     return
   }
@@ -26,7 +26,10 @@ Set-PSReadLineKeyHandler -Chord Ctrl+F1 -Description 'Try to open powershell doc
   $cursor = 0
   [System.Management.Automation.Language.Token[]]$tokens = $null
   [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$tokens, [ref]$null, [ref]$cursor)
-  $name = $tokens.Where{ $_.TokenFlags -ceq 'CommandName' -and $_.Extent.StartOffset -le $cursor }[-1].Text
+  [string]$name = $tokens.Where({ $_.TokenFlags -ceq 'CommandName' -and $_.Extent.StartOffset -le $cursor }, 'Last', 1)
+  if (!$name) {
+    return
+  }
   $info = Get-Command $name -ea Ignore
   if ($info.CommandType -eq 'Alias') {
     $info = $info.ResolvedCommand
@@ -113,7 +116,7 @@ $cmd = {
   [System.Management.Automation.Language.Ast]$ast = $null
   [System.Management.Automation.Language.Token[]]$tokens = $null
   [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$null, [ref]$null)
-  $text = if ($tokens.Where{ $_.TokenFlags -ceq 'CommandName' }.Count -eq 1) {
+  $text = if ($tokens.Where({ $_.TokenFlags -ceq 'CommandName' }, 'First', 2).Count -eq 1) {
     $i = $tokens[0].Kind -ceq 'Dot' -or $tokens[0].Kind -ceq 'Ampersand' ? $tokens[1].Extent.StartOffset : 0
     $ast.ToString().Substring($i)
   }

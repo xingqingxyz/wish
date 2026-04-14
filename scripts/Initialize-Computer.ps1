@@ -30,7 +30,7 @@ elseif ($IsLinux) {
 # merge history files
 $dir = Split-Path (Get-PSReadLineOption).HistorySavePath
 Out-File -InputObject (Get-Content $dir/* | Select-Object -Unique) -LiteralPath $dir/ConsoleHost_history.txt
-New-Item -ItemType HardLink -Force -Target $dir/ConsoleHost_history.txt "$dir/Visual Studio Code Host_history.txt"
+New-Item -ItemType SymbolicLink -Force -Target ConsoleHost_history.txt "$dir/Visual Studio Code Host_history.txt"
 # update help
 Update-Help -UICulture en-US -ea Ignore
 # system pkgs

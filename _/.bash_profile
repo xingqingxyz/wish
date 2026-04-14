@@ -3,6 +3,9 @@
 # init env
 if [ -f ~/.env ]; then
   while read -r line; do
+    if [[ $line =~ ^\s*# ]]; then
+      continue
+    fi
     export "$line"
   done < ~/.env
 fi
