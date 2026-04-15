@@ -54,7 +54,7 @@
   # RequiredModules = @()
 
   # Assemblies that must be loaded prior to importing this module
-  RequiredAssemblies = @('./bin/Release/net10.0/CoreAudio.dll')
+  RequiredAssemblies   = @('./bin/Release/net10.0/CoreAudio.dll')
 
   # Script files (.ps1) that are run in the caller's environment prior to importing this module.
   # ScriptsToProcess = @()
@@ -117,9 +117,7 @@
 
       # External dependent modules of this module
       # ExternalModuleDependencies = @()
-
     } # End of PSData hashtable
-
   } # End of PrivateData hashtable
 
   # HelpInfo URI of this module

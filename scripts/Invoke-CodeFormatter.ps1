@@ -15,189 +15,147 @@ param (
   [Parameter(Mandatory, Position = 0, ParameterSetName = 'Stdin')]
   [ValidateNotNullOrEmpty()]
   [string]
-  $Language,
+  $FileName,
   [Parameter(ParameterSetName = 'Path')]
   [Parameter(ParameterSetName = 'LiteralPath')]
   [switch]
   $Inplace,
-  [Parameter(ParameterSetName = 'Stdin')]
+  [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'Stdin')]
   [System.Object]
   $InputObject
 )
 
 function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) {
-  switch -CaseSensitive -Regex ([System.IO.Path]::GetExtension($Path).Substring(1)) {
-    '^(?:c|m|mm|cpp|cc|cp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|inl|ipp|java|proto|protodevel)$' {
+  switch -CaseSensitive -Regex ([System.IO.Path]::GetExtension($Path)) {
+    '^\.(?:asciipb|c|c\+\+|cc|cp|cpp|cs|cxx|h|h\+\+|hh|hpp|hxx|inl|ipp|java|m|mm|proto|protodevel|sv|svh|td|textpb|textproto|txtpb|v|vh)$' {
       if ($Inplace) {
-        { clang-format -i --style=LLVM `-- $args[0] }
+        { clang-format -i --style=LLVM `-- $args }
       }
       elseif ($Stdin) {
-        { $input | clang-format --style=LLVM --assume-filename=$args[0] }
+        { $input | clang-format --style=LLVM --assume-filename=$args }
       }
       else {
-        { clang-format --style=LLVM `-- $args[0] }
+        { clang-format --style=LLVM `-- $args }
       }
       break
     }
-    '^(?:dart)$' {
+    '^\.(?:dart)$' {
       if ($Inplace) {
-        { dart format `-- $args[0] }
+        { dart format `-- $args }
       }
       elseif ($Stdin) {
         { $input | dart format }
       }
       else {
-        { dart format -o show --show none --summary none `-- $args[0] }
+        { dart format -o show --show none --summary none `-- $args }
       }
       break
     }
-    '^(?:cs|csx|fs|fsi|fsx|vb)$' {
+    '^\.(?:go)$' {
       if ($Inplace) {
-        { dotnet format --no-restore --include `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        {
-          process {
-            $file = [System.IO.Path]::GetRandomFileName() + [System.IO.Path]::GetExtension($args[0])
-            $input > $file
-            dotnet format --no-restore --include `-- $file
-            Get-Content -LiteralPath $file
-          }
-          clean {
-            Remove-Item -LiteralPath $file -Force
-          }
-        }
-      }
-      else {
-        {
-          process {
-            $file = [System.IO.Path]::GetTempFileName()
-            Copy-Item -LiteralPath $args[0] $file -Force
-            dotnet format --no-restore --include `-- $args[0]
-            Get-Content -LiteralPath $args[0]
-          }
-          clean {
-            Copy-Item -LiteralPath $file $args[0] -Force
-            Remove-Item -LiteralPath $file -Force
-          }
-        }
-      }
-      break
-    }
-    '^(?:go)$' {
-      if ($Inplace) {
-        { goimports -w `-- $args[0] }
+        { goimports -w `-- $args }
       }
       elseif ($Stdin) {
         { $input | goimports }
       }
       else {
-        { goimports `-- $args[0] }
+        { goimports `-- $args }
       }
       break
     }
-    '^(?:js|cjs|mjs|jsx|tsx|ts|cts|mts|json|jsonc|json5|yml|yaml|htm|html|xhtml|shtml|vue|gql|graphql|css|scss|sass|less|hbs|md|markdown)$' {
+    '^\.(?:js|cjs|mjs|jsx|tsx|ts|cts|mts|json|jsonc|json5|yml|yaml|htm|html|xhtml|shtml|vue|gql|graphql|css|scss|sass|less|hbs|handlebars|md|markdown|toml)$' {
       if ($Inplace) {
-        { prettier -w --ignore-path= `-- $args[0] }
+        { oxfmt --write --ignore-path= --with-node-modules `-- $args }
       }
       elseif ($Stdin) {
-        { $input | prettier --ignore-path= --stdin-filepath=$args[0] }
+        { $input | oxfmt --ignore-path= --with-node-modules --stdin-filepath=$args }
       }
       else {
-        { prettier --ignore-path= `-- $args[0] }
+        { oxfmt --ignore-path= --with-node-modules `-- $args }
       }
       break
     }
-    '^(?:ps1|psm1|psd1)$' {
+    '^\.(?:ps1|psd1|psm1)$' {
       if ($Inplace) {
-        { PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $args[0]) -Settings $env:WISH_ROOT/CodeFormatting.psd1 | Out-File -NoNewline $args[0] }
+        { $args.ForEach{ PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $_) -Settings $env:WISH_ROOT/CodeFormatting.psd1 | Out-File -NoNewline $_ } }
       }
       elseif ($Stdin) {
-        { PSScriptAnalyzer\Invoke-Formatter $input -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
+        { PSScriptAnalyzer\Invoke-Formatter (@($input) -join "`n") -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
       }
       else {
-        { PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $args[0]) -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
+        { Get-Content -Raw -LiteralPath $args | ForEach-Object { PSScriptAnalyzer\Invoke-Formatter $_ -Settings $env:WISH_ROOT/CodeFormatting.psd1 } }
       }
       break
     }
-    '^(?:py|pyi|pyw|pyx|pxd|gyp|gypi)$' {
+    '^\.(?:py|pyi|pyw|pyx|pxd|gyp|gypi|ipynb)$' {
       if ($Inplace) {
-        { ruff format -n `-- $args[0] }
+        { ruff format -n `-- $args }
       }
       elseif ($Stdin) {
-        { $input | ruff format -n --stdin-filename $args[0] }
+        { $input | ruff format -n --stdin-filename $args }
       }
       else {
-        { Get-Content -LiteralPath $args[0] | ruff format -n --stdin-filename $args[0] }
+        { $args.ForEach{ Get-Content -Raw -LiteralPath $_ | ruff format -n --stdin-filename $_ } }
       }
       break
     }
-    '^(?:rs)$' {
+    '^\.(?:rs)$' {
       if ($Inplace) {
-        { rustfmt `-- $args[0] }
+        { rustfmt `-- $args }
       }
       elseif ($Stdin) {
         { $input | rustfmt --emit stdout }
       }
       else {
-        { rustfmt --emit stdout `-- $args[0] }
+        { rustfmt --emit stdout `-- $args }
       }
       break
     }
-    '^(?:sh|bash|zsh|ash)$' {
+    '^\.(?:sh|bash|zsh|ash)$' {
       if ($Inplace) {
-        { shfmt -i 2 -bn -ci -sr `-- $args[0] }
+        { shfmt -i 2 -bn -ci -sr `-- $args }
       }
       elseif ($Stdin) {
-        { $input | shfmt -i 2 -bn -ci -sr --filename $args[0] }
+        { $input | shfmt -i 2 -bn -ci -sr --filename $args }
       }
       else {
-        { Get-Content -LiteralPath $args[0] | shfmt -i 2 -bn -ci -sr --filename $args[0] }
+        { $args.ForEach{ Get-Content -Raw -LiteralPath $_ | shfmt -i 2 -bn -ci -sr --filename $_ } }
       }
       break
     }
-    '^(?:toml)$' {
+    '^\.(?:lua)$' {
       if ($Inplace) {
-        { taplo format `-- $args[0] }
-      }
-      elseif ($Stdin) {
-        { $input | taplo format - --stdin-filepath=$args[0] }
-      }
-      else {
-        { Get-Content -LiteralPath $args[0] | taplo format - --stdin-filepath=$args[0] }
-      }
-      break
-    }
-    '^(?:lua)$' {
-      if ($Inplace) {
-        { stylua `-- $args[0] }
+        { stylua `-- $args }
       }
       elseif ($Stdin) {
         { $input | stylua }
       }
       else {
-        { Get-Content -LiteralPath $args[0] | stylua }
+        { $args.ForEach{ Get-Content -Raw -LiteralPath $_ | stylua } }
       }
       break
     }
-    '^(?:zig)$' {
+    '^\.(?:zig)$' {
       if ($Inplace) {
-        { zig fmt $args[0] }
+        { zig fmt $args }
       }
       elseif ($Stdin) {
         { $input | zig fmt --stdin }
       }
       else {
-        { Get-Content -LiteralPath $args[0] | zig fmt --stdin }
+        { $args.ForEach{ Get-Content -Raw -LiteralPath $_ | zig fmt --stdin } }
       }
       break
     }
     default {
-      if ($Stdin) {
+      if ($Inplace) {
+        {}
+      }
+      elseif ($Stdin) {
         { $input }
       }
       else {
-        { Get-Content -LiteralPath $args[0] }
+        { Get-Content -Raw -LiteralPath $args }
       }
       break
     }
@@ -206,19 +164,17 @@ function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) 
 
 if ($MyInvocation.ExpectingInput) {
   if ($MyInvocation.PipelinePosition -lt $MyInvocation.PipelineLength) {
-    return $input | & (Get-CodeFormatParser $Language -Stdin)
+    return $input | & (Get-CodeFormatParser $FileName -Stdin)
   }
-  return $input | & (Get-CodeFormatParser $Language -Stdin) | bat -pl$Language
+  return $input | & (Get-CodeFormatParser $FileName -Stdin) | bat -p --file-name=$FileName
 }
 if ($Path) {
   $LiteralPath = Convert-Path $Path -Force
 }
 if ($Inplace) {
-  return $LiteralPath.ForEach{ & (Get-CodeFormatParser $_ -Inplace) $_ }
+  return & (Get-CodeFormatParser $LiteralPath[0] -Inplace) @LiteralPath
 }
 if ($MyInvocation.PipelinePosition -lt $MyInvocation.PipelineLength) {
-  return $LiteralPath.ForEach{ & (Get-CodeFormatParser $_) $_ }
+  return & (Get-CodeFormatParser $LiteralPath[0]) @LiteralPath
 }
-$LiteralPath.ForEach{
-  & (Get-CodeFormatParser $_) $_ | bat -p --color=always --file-name=$_
-} | & $env:PAGER
+& (Get-CodeFormatParser $LiteralPath[0]) @LiteralPath | bat -p --file-name $LiteralPath[0]

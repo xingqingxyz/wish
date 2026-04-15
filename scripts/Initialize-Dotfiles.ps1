@@ -28,35 +28,35 @@ $root = switch ($true) {
 
 if ($Install) {
   return $LiteralPath.ForEach{
-    $path = $_.Replace($HOME, $root)
-    if ($path.Length -eq $_.Length) {
+    $target = $_.Replace($HOME, $root)
+    if ($target.Length -eq $_.Length) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
     }
-    Copy-Item -LiteralPath $_ (New-Item $path -Force) -Force
-    New-Item -ItemType SymbolicLink -Force -Target $path $_
+    Copy-Item -LiteralPath $_ (New-Item $target -Force) -Force
+    New-Item -ItemType SymbolicLink -Force -Target $target $_
   }
 }
 elseif ($Uninstall) {
   return $LiteralPath.ForEach{
-    $path = $_.Replace($HOME, $root)
-    if ($path.Length -eq $_.Length) {
+    $target = $_.Replace($HOME, $root)
+    if ($target.Length -eq $_.Length) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
     }
-    $content = Get-Content -LiteralPath $path -Raw -Force -ea Ignore
-    Remove-Item -LiteralPath $_, $path -Force -ea Ignore
+    $content = Get-Content -LiteralPath $target -Raw -Force -ea Ignore
+    Remove-Item -LiteralPath $_, $target -Force -ea Ignore
     $content > $_
   }
 }
 
 $excludeDirs = ($IsWindows -or $IsMacOS) ? @() : 'shell', 'windows', 'macos'
 fd -HIa -tf -tl $excludeDirs.ForEach{ "-E$_" } --base-directory=$root | ForEach-Object {
-  $path = $_.Replace($root, $HOME)
+  $file = $_.Replace($root, $HOME)
   $target = (Get-Item -LiteralPath $_ -Force).ResolvedTarget
   if ($null -eq $target) {
     throw "Failed to resolve target for $_"
   }
-  if ((Get-Item -LiteralPath $path -Force -ea Ignore).Target -cne $target) {
-    New-Item -ItemType SymbolicLink -Force -Target $target $path
+  if ((Get-Item -LiteralPath $file -Force -ea Ignore).Target -cne $target) {
+    New-Item -ItemType SymbolicLink -Force -Target $target $file
   }
 }
 if ($IsWindows) {
