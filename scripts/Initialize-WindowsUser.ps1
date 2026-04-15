@@ -4,6 +4,8 @@ New-Item -ItemType Directory -Force @(
   "$env:LOCALAPPDATA\prefix\share\jar"
   1..8 | ForEach-Object { "$env:LOCALAPPDATA\prefix\share\man\man$_" }
 )
+# windows terminal settings
+Copy-Item -LiteralPath $PSScriptRoot/data/windows-terminal-settings.json $env:LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json, $env:LOCALAPPDATA/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json -Force
 # auto run apps on login
 @(
   'C:\Program Files\Alacritty\alacritty.exe'

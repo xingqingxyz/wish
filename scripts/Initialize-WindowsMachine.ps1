@@ -33,3 +33,10 @@ Enable-WindowsOptionalFeature -FeatureName VirtualMachinePlatform, Microsoft-Win
 # winget
 Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
 winget.exe upgrade -r --accept-package-agreements --accept-source-agreements
+# services
+# vmware
+if (Test-Path -LiteralPath 'C:\Program Files (x86)\VMware\VMware Workstation\vmware.exe') {
+  ('VMAuthdService', 'VMnetDHCP', 'VMUSBArbService', 'VMware NAT Service', 'VmwareAutostartService').ForEach{
+    Set-Service $_ -Status Stopped -StartupType Manual
+  }
+}

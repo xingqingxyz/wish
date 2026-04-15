@@ -156,27 +156,28 @@ function Set-SystemProxy {
     [switch]
     $Local
   )
-  $On = !$Off
-  if ($On) {
-    Set-EnvironmentVariable -Scope User http_proxy=http://${hostName}:1234 https_proxy=http://${hostName}:1234 all_proxy=http://${hostName}:1235
+  if ($Off) {
+    Set-EnvironmentVariable -Scope User http_proxy= https_proxy= all_proxy=
   }
   else {
-    Set-EnvironmentVariable -Scope User http_proxy= https_proxy= all_proxy=
+    Set-EnvironmentVariable -Scope User http_proxy=http://${hostName}:1234 https_proxy=http://${hostName}:1234 all_proxy=http://${hostName}:1235
   }
   if ($Local) {
     return
   }
   if ($IsWindows) {
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyEnable -Value ([int]$On) -Type DWord
-    if ($On) {
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyEnable -Value ([int]!$Off) -Type DWord
+    if (!$Off) {
       Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyServer -Value ${hostName}:1234 -Type String
-      Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyOverride -Value (@($env:no_proxy.Split(',').ForEach{ "https://$_" }; '<local>') -join ';') -Type String
+      if ($env:no_proxy) {
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyOverride -Value (@($env:no_proxy.Split(',').ForEach{ "https://$_" }; '<local>') -join ';') -Type String
+      }
     }
   }
   elseif ($IsLinux -and ($env:XDG_SESSION_DESKTOP -ceq 'gnome' -or $env:XDG_SESSION_DESKTOP -ceq 'ubuntu')) {
-    $mode = $On ? 'manual' : 'none'
+    $mode = $Off ? 'none' : 'manual'
     gsettings set org.gnome.system.proxy mode $mode
-    if ($On -and (gsettings get org.gnome.system.proxy.http host).Trim("'") -ne $hostName) {
+    if (!$Off -and (gsettings get org.gnome.system.proxy.http host).Trim("'") -cne $hostName) {
       gsettings set org.gnome.system.proxy.http host $hostName
       gsettings set org.gnome.system.proxy.http port 1234
       gsettings set org.gnome.system.proxy.https host $hostName
@@ -284,7 +285,7 @@ function Set-EnvironmentVariable {
     throw [System.NotImplementedException]::new()
   }
   elseif ($IsLinux) {
-    $envFilePath = $Scope -ceq 'Machine' ? '/etc/profile.d/sh.local' : "$HOME/.env"
+    $envFilePath = $Scope -ceq 'Machine' ? '/etc/.env' : "$HOME/.env"
     $savedEnvironment = $envMap
     $envMap = [Dictionary[string, string]]::new()
     Get-Region "${Scope}Env" $envFilePath | ForEach-Object {
@@ -300,7 +301,7 @@ function Set-EnvironmentVariable {
       }
     }
     $lines = $envMap.GetEnumerator().ForEach{ $_.Key + '=' + $_.Value }
-    Set-Region "${Scope}Env" $lines $envFilePath -Inplace
+    Set-Region "${Scope}Env" $lines $envFilePath -Force
   }
   else {
     throw [System.NotImplementedException]::new()

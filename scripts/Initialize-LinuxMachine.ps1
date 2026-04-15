@@ -5,6 +5,17 @@ if ((id -u) -cne '0') {
 }
 # data dirs for GithubRelease
 New-Item -ItemType Directory /usr/local/share/jar -Force
+# init machine env
+Set-Region 'LoadMachineEnv' @'
+if [ -f /etc/.env ]; then
+  while read -r line; do
+    if [[ $line =~ ^\s*# ]]; then
+      continue
+    fi
+    export "$line"
+  done < /etc/.env
+fi
+'@ /etc/profile.d/sh.local -Force
 if ($PSVersionTable.OS.StartsWith('Fedora ')) {
   # dnf copr
   $coprs = @(

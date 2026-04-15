@@ -160,7 +160,7 @@ function Register-PSScheduledTask {
   if ($IsWindows) {
     $trigger = switch ($Interval) {
       'once' { New-ScheduledTaskTrigger -At $At -Once; break }
-      'daily' { New-ScheduledTaskTrigger -At $At -Daily -RandomDelay 12:0:0; break }
+      'daily' { New-ScheduledTaskTrigger -At $At -Daily -RandomDelay 1:0:0:0; break }
       'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -RandomDelay 3:0:0:0; break }
       'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2 -RandomDelay 7:0:0:0; break }
       'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 15 -RandomDelay 30:0:0:0; break }
@@ -178,7 +178,7 @@ function Register-PSScheduledTask {
     }
     $date, $acc = switch ($Interval) {
       'once' { $At.ToString('yyyy-MM-dd'), '1m'; break }
-      'daily' { '*-*-*', '12h'; break }
+      'daily' { '*-*-*', '1d'; break }
       'weekly' { 'Mon *-*-*', '3d'; break }
       'two-weeks' { '*-*-1,16', '7d'; break }
       'monthly' { '*-*-01', '14d'; break }
@@ -301,7 +301,7 @@ function Get-Region {
     $lines = (Get-Content -LiteralPath $LiteralPath -ea Ignore) ?? ''
   }
   $found = 0
-  foreach ($line in $lines) {
+  $lines = foreach ($line in $lines) {
     if (!$found -and $line.Trim() -ceq "$LineComment#region $Name") {
       $found = 1
     }
@@ -316,10 +316,13 @@ function Get-Region {
     }
   }
   if (!$found) {
-    Write-Error "#region $Name mark not found"
+    Write-Warning "#region $Name mark not found"
   }
   elseif ($found -eq 1) {
-    Write-Error '#endregion mark not found'
+    Write-Warning '#endregion mark not found'
+  }
+  else {
+    $lines
   }
 }
 
@@ -342,7 +345,7 @@ function Set-Region {
     $LiteralPath,
     [Parameter(ParameterSetName = 'LiteralPath')]
     [switch]
-    $Inplace,
+    $Force,
     [Parameter()]
     [ValidateNotNullOrEmpty()]
     [string]
@@ -351,7 +354,13 @@ function Set-Region {
     [System.Object]
     $InputObject
   )
-  [string[]]$lines = $MyInvocation.ExpectingInput ? $input : (Get-Content -LiteralPath $LiteralPath -ea Ignore)
+  if ($LiteralPath -and !(Test-Path -LiteralPath $LiteralPath -PathType Leaf)) {
+    if (!$Force) {
+      return Write-Error "file $LiteralPath not found"
+    }
+    New-Item $LiteralPath -Force
+  }
+  [string[]]$lines = $MyInvocation.ExpectingInput ? $input : (Get-Content -LiteralPath $LiteralPath)
   $found = 0
   $newLines = $lines.ForEach{
     if (!$found -and $_.Trim() -ceq "$LineComment#region $Name") {
@@ -380,7 +389,7 @@ function Set-Region {
       "$LineComment#endregion"
     )
   }
-  if ($Inplace) {
+  if ($LiteralPath) {
     $newLines > $LiteralPath
   }
   else {

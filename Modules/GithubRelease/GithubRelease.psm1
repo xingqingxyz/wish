@@ -279,7 +279,8 @@ function Update-Software {
         Write-Warning 'calling winget on non-Windows platform'
         continue
       }
-      sudo winget upgrade -r --accept-package-agreements
+      $ags = @(if ($Force) { '--include-pinned' })
+      sudo winget upgrade -r --accept-package-agreements $ags
       if ($Force -and $pkgs) {
         sudo winget install --accept-package-agreements $pkgs
       }
@@ -1113,7 +1114,7 @@ StartupWMClass=localsend_app
           sudo mkdir -p $baseDir
           sudo tar -xf $buildDir/$file -C $baseDir
           sudo chmod +x $baseDir/pwsh
-          sudo ln -sf $baseDir/pwsh $binDir
+          sudo ln -sf $baseDir/pwsh $sudoBinDir
           break
         }
         default { throw [System.NotImplementedException]::new() }
