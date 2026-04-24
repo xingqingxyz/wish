@@ -157,7 +157,7 @@ function Set-SystemProxy {
     $Local
   )
   if ($Off) {
-    Set-EnvironmentVariable -Scope User http_proxy= https_proxy= all_proxy=
+    Set-EnvironmentVariable -Scope User http_proxy https_proxy all_proxy
   }
   else {
     Set-EnvironmentVariable -Scope User http_proxy=http://${hostName}:1234 https_proxy=http://${hostName}:1234 all_proxy=http://${hostName}:1235
@@ -252,7 +252,7 @@ function Set-EnvironmentVariable {
     [System.Object]
     $InputObject
   )
-  $envMap = [Dictionary[string, string]]::new()
+  $envMap = @{}
   $ArgumentList.ForEach{
     # note: VAR= sets to '' but VAR sets to $null (delete)
     $key, $value = $_.Split('=')
@@ -287,7 +287,7 @@ function Set-EnvironmentVariable {
   elseif ($IsLinux) {
     $envFilePath = $Scope -ceq 'Machine' ? '/etc/.env' : "$HOME/.env"
     $savedEnvironment = $envMap
-    $envMap = [Dictionary[string, string]]::new()
+    $envMap = @{}
     Get-Region "${Scope}Env" $envFilePath | ForEach-Object {
       $key, $value = $_.Split('=', 2)
       $envMap[$key] = $value
@@ -361,7 +361,7 @@ function Update-SessionEnvironment {
   if (!$IsWindows) {
     throw [System.NotImplementedException]::new()
   }
-  $envMap = [Dictionary[string, string]]::new()
+  $envMap = @{}
   [Microsoft.Win32.RegistryKey]$regEnv = Get-Item -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\'
   $regEnv.GetValueNames().ForEach{
     $envMap[$_] = $regEnv.GetValue($_)

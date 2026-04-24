@@ -4,11 +4,14 @@ apt:
   - aria2
   - build-essential
   - clang-22
-  - clangd-22
   - clangd
+  - clangd-22
   - cmake
+  - cosign
   - curl
+  - dconf-editor
   - docker.io
+  - dotnet-sdk-10.0
   - fcitx5
   - fcitx5-chinese-addons
   - fonts-jetbrains-mono
@@ -24,6 +27,8 @@ apt:
   - lld-22
   - lldb-22
   - mesa-utils
+  - microsoft-edge-stable
+  - minisign
   - ninja-build
   - openjdk-25-jdk
   - pandoc
@@ -32,7 +37,8 @@ apt:
   - shellcheck
   - shfmt
   - vlc
-  - wget
+  - wl-clipboard
+  - xclip
 apt-raspi:
   - aria2
   - build-essential
@@ -74,8 +80,8 @@ bun:
   - '@tencent-ai/codebuddy-code'
   - '@vscode/vsce'
   - generator-code
+  - oxfmt
   - pnpm
-  - prettier
   - yo
 cargo:
   - cargo-update
@@ -87,6 +93,7 @@ dnf:
   - chromedriver
   - clang
   - clang-tools-extra
+  - cosign
   - cmake
   - dconf-editor
   - dictd
@@ -105,6 +112,8 @@ dnf:
   - ImageMagick
   - jetbrains-mono-fonts
   - lldb
+  - microsoft-edge-stable
+  - minisign
   - msedit
   - ninja-build
   - openssl-devel
@@ -117,6 +126,7 @@ dnf:
   - strace
   - valgrind
   - vlc
+  - wl-clipboard
 dnf-wsl:
   - aria2
   - bat
@@ -152,7 +162,6 @@ fedora:
   - dotnet
   - flutter
   - fzf
-  - glow
   - go
   - golangci-lint
   - hexyl
@@ -187,7 +196,6 @@ macos:
   - dotnet
   - flutter
   - fzf
-  - glow
   - go
   - golangci-lint
   - hexyl
@@ -228,7 +236,6 @@ raspi:
   - fd
   - fzf
   - gh
-  - glow
   - go
   - golangci-lint
   - hexyl
@@ -255,29 +262,22 @@ rustup-targets:
   - wasm32-unknown-unknown
 snap: []
 ubuntu:
-  - bash
   - bat
   - bun
   - cargo-generate
   - code
   - deno
   - diskus
-  - dotnet
   - edit
   - fd
   - flutter
   - fzf
   - gh
-  - glow
   - go
   - golangci-lint
   - hexyl
   - hyperfine
-  - java
   - jd
-  - jq
-  - less
-  - magick
   - mkcert
   - mdbook
   - node
@@ -296,6 +296,7 @@ ubuntu:
   - yq
 uv:
   - git-filter-repo
+  - httpie
   - markitdown[all]
   - yt-dlp
 uv-python:
@@ -358,7 +359,6 @@ winget:
 wsl:
   - dotnet
   - fzf
-  - glow
   - hexyl
   - jq
   - node

@@ -28,8 +28,8 @@ if ($Build) {
   }
   git submodule update --init --recursive --remote
   dotnet build -c Release
-  uv sync --upgrade
   pnpm up --latest
+  uv sync --upgrade
 }
 elseif ($Format) {
   $ags = git config --file ./.gitmodules --get-regexp submodule.*.path | ForEach-Object {

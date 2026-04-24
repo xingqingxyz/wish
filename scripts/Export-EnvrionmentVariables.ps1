@@ -117,11 +117,12 @@ $HOME/.local/share/powershell/Scripts
     $PATH += ':/usr/lib/wsl/lib:' + ((bash --norc -c 'echo "$PATH"').Split(':').Where{ $_.StartsWith('/mnt/') } -join ':')
   }
   ($commonVar + @{
-    LANG          = 'zh_CN.UTF-8'
-    MANPAGER      = "sh -c `"sed 's/\x1b\[[0-9;]*m\|.\x08//g' 2>/dev/null | bat -plman`""
-    MANROFFOPT    = '-c'
-    SYSTEMD_PAGER = ''
-    PATH          = $PATH
+    LANG                 = 'zh_CN.UTF-8'
+    MANPAGER             = "sh -c `"sed 's/\x1b\[[0-9;]*m\|.\x08//g' 2>/dev/null | bat -plman`""
+    MANROFFOPT           = '-c'
+    PATH                 = $PATH
+    QT_QPA_PLATFORMTHEME = 'qt6ct'
+    SYSTEMD_PAGER        = ''
   }).GetEnumerator() | Sort-Object Key | ForEach-Object {
     [System.Environment]::SetEnvironmentVariable($_.Key, $_.Value)
     $_.Key + '=' + $_.Value

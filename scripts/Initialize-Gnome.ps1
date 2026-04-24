@@ -1,5 +1,8 @@
-# gnome-shell
+# dconf load
+# dconf dump /org/gnome/shell/ > ./scripts/data/gnome-shell.ini
+# dconf dump /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ > ./scripts/data/custom-keybindings.ini
 Get-Content -LiteralPath $PSScriptRoot/data/gnome-shell.ini | dconf load /org/gnome/shell/
+Get-Content -LiteralPath $PSScriptRoot/data/custom-keybindings.ini | dconf load /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/
 # no_proxy
 gsettings set org.gnome.system.proxy ignore-hosts ($env:no_proxy.Split(',') | ConvertTo-Json)
 # nautilus

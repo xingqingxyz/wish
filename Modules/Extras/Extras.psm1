@@ -171,9 +171,7 @@ function Register-PSScheduledTask {
     Register-ScheduledTask $Name -Description "PowerShell $Name task" -Trigger $trigger -Action $action -Settings $settings -RunLevel ($AsAdmin ? 'Highest' : 'Limited') -Force:$Force
   }
   elseif ($IsLinux) {
-    # note: not accurate implementation
-    [string[]]$ags = @(if (!$AsAdmin) { '--user' })
-    if (!$Force -and (systemctl show $ags $Name -p ExecStart)) {
+    if (!$Force -and (systemctl show @(if (!$AsAdmin) { '--user' }) $Name -p ExecStart)) {
       return Write-Error "Task $Name already exists."
     }
     $date, $acc = switch ($Interval) {
@@ -217,14 +215,15 @@ WantedBy=timers.target
     if ($AsAdmin) {
       $null = $service | sudo tee /etc/systemd/system/$Name.service
       $null = $timer | sudo tee /etc/systemd/system/$Name.timer
+      sudo systemctl daemon-reload
+      sudo systemctl enable --now $Name`.timer
     }
     else {
       $service > ~/.config/systemd/user/$Name.service
       $timer > ~/.config/systemd/user/$Name.timer
+      systemctl --user daemon-reload
+      systemctl --user enable --now $Name`.timer
     }
-    $ags = @(if (!$AsAdmin) { "-u$env:USER" }; 'systemctl'; $ags)
-    sudo $ags daemon-reload
-    sudo $ags enable --now $Name`.timer
   }
   else {
     throw [System.NotImplementedException]::new()
@@ -252,22 +251,14 @@ function Unregister-PSScheduledTask {
   }
   elseif ($IsLinux) {
     if ($AsAdmin) {
-      try {
-        sudo systemctl disable $Name.ForEach{ $_ + '.timer' }
-        sudo rm -f `-- $Name.ForEach{ "/etc/systemd/system/$_.service"; "/etc/systemd/system/$_.timer" }
-      }
-      finally {
-        sudo systemctl daemon-reload
-      }
+      sudo systemctl disable $Name.ForEach{ $_ + '.timer' }
+      sudo rm -f `-- $Name.ForEach{ "/etc/systemd/system/$_.service"; "/etc/systemd/system/$_.timer" }
+      sudo systemctl daemon-reload
     }
     else {
-      try {
-        systemctl disable --user $Name.ForEach{ $_ + '.timer' }
-        Remove-Item -LiteralPath $Name.ForEach{ "$HOME/.config/systemd/user/$_.service"; "$HOME/.config/systemd/user/$_.timer" } -Force
-      }
-      finally {
-        systemctl daemon-reload --user
-      }
+      systemctl disable --user $Name.ForEach{ $_ + '.timer' }
+      Remove-Item -LiteralPath $Name.ForEach{ "$HOME/.config/systemd/user/$_.service"; "$HOME/.config/systemd/user/$_.timer" } -Force
+      systemctl daemon-reload --user
     }
   }
   else {

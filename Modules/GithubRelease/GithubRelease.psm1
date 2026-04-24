@@ -68,6 +68,7 @@ function Update-Software {
       if (!$Force) {
         continue
       }
+      sudo apt-file update
       if ($IsWSL) {
         if (!$pkgMap['apt-wsl']) {
           continue
@@ -266,8 +267,8 @@ function Update-Software {
       if ($Global) {
         uv tool upgrade --all
         if ($Force) {
-          $pkgMap['uv-python'].ForEach{ uv python install $_ }
-          $pkgs.ForEach{ uv tool install $_ }
+          $pkgMap['uv-python'].ForEach{ uv python install $_ --force }
+          $pkgs.ForEach{ uv tool install $_ --force }
         }
         continue
       }
@@ -381,7 +382,7 @@ function rustenv {
 }
 
 function execute {
-  $cmd, $ags = $args
+  $cmd, $ags = $args.ForEach{ $_ }
   $cmd = (Get-Command $cmd -Type Application -TotalCount 1).Source
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $ags"
@@ -455,7 +456,7 @@ function Invoke-ReleaseDownload ($Meta, [string[]]$Name) {
     $existed.ForEach{ "http://github.com/$($Meta.repo)/releases/download/$($Meta.tag)/$_"; " out=$_" } | execute aria2c -c -x2 -j32 --allow-overwrite --file-allocation=$($IsWindows ? 'prealloc' : 'falloc') -d $buildDir >> $buildDir/aria2c.log
   }
   if ($Name) {
-    execute gh release download -R $Meta.repo @($Name.ForEach{ '-p' + $_ }) -D $buildDir $Meta.tag
+    execute gh release download -R $Meta.repo $Name.ForEach{ '-p' + $_ } -D $buildDir $Meta.tag
   }
 }
 
@@ -853,6 +854,16 @@ function Install-Release {
           sudo installer -pkg $buildDir/Ghostty.dmg -dumplog > Temp:/$file.log
           break
         }
+        $IsFedora {
+          sudo dnf copr enable -y avengemedia/dms
+          sudo dnf install -y ghostty
+          break
+        }
+        ($IsUbuntu -or $IsRaspi) {
+          sudo add-apt-repository -y ppa:avengemedia/danklinux
+          sudo apt install -y ghostty
+          break
+        }
         $IsLinux {
           $file = 'Ghostty-{0}-{1}.AppImage' -f $Meta.version, $rust.arch
           Invoke-ReleaseDownload $file
@@ -916,43 +927,36 @@ function Install-Release {
       break
     }
     handy {
-      switch ($true) {
-        $IsWindows {
-          $file = 'Handy_{0}_{1}.msi' -f $Meta.version, [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-          Invoke-ReleaseDownload $Meta $file, $file`.sig
-          gpg --verify $buildDir/$file.sig $buildDir/$file
-          sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file
-          break
+      if ($IsMacOS) {
+        $arch = switch ([RuntimeInformation]::OSArchitecture) {
+          'X64' { 'x64'; break }
+          'Arm64' { 'aarch64'; break }
+          default { throw [System.NotImplementedException]::new() }
         }
-        $IsMacOS {
-          $arch = switch ([RuntimeInformation]::OSArchitecture) {
-            'X64' { 'x64'; break }
-            'Arm64' { 'aarch64'; break }
-            default { throw [System.NotImplementedException]::new() }
-          }
-          $file = 'Handy_{0}_{1}.dmg' -f $Meta.version, $rust.arch
-          Invoke-ReleaseDownload $Meta $file
-          sudo hdiutil attach $buildDir/$file -nobrowse -quiet
-          sudo cp -R /Volumes/Handy/Handy.app $prefixDir/handy
-          sudo ln -sf $prefixDir/handy/Contents/MacOS/Handy $binDir/handy
-          sudo hdiutil detach /Volumes/Handy -quiet
-          break
-        }
-        $IsFedora {
-          $file = 'handy-{0}-1.{1}.rpm' -f $Meta.version, $rust.arch
-          Invoke-ReleaseDownload $Meta $file, $file`.sig
-          gpg --verify $buildDir/$file.sig $buildDir/$file
-          sudo dnf install -y $buildDir/$file
-          break
-        }
-        ($IsUbuntu -or $IsRaspi) {
-          $file = 'handy_{0}_{1}.deb' -f $Meta.version, $go.arch
-          Invoke-ReleaseDownload $Meta $file, $file`.sig
-          gpg --verify $buildDir/$file.sig $buildDir/$file
-          sudo dpkg -i $buildDir/$file
-          break
-        }
+        $file = 'Handy_{0}_{1}.dmg' -f $Meta.version, $rust.arch
+        Invoke-ReleaseDownload $Meta $file
+        sudo hdiutil attach $buildDir/$file -nobrowse -quiet
+        sudo cp -R /Volumes/Handy/Handy.app $prefixDir/handy
+        sudo ln -sf $prefixDir/handy/Contents/MacOS/Handy $binDir/handy
+        sudo hdiutil detach /Volumes/Handy -quiet
+        break
+      }
+      if (!$Meta.pubkey) {
+        $Meta.pubkey = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((Invoke-RestMethod "https://github.com/$($Meta.repo)/raw/HEAD/src-tauri/tauri.conf.json").plugins.updater.pubkey)).Split("`n", 3)[1]
+      }
+      $file = switch ($true) {
+        $IsWindows { 'Handy_{0}_{1}.msi' -f $Meta.version, [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant(); break }
+        $IsFedora { 'Handy-{0}-1.{1}.rpm' -f $Meta.version, $rust.arch; break }
+        ($IsUbuntu -or $IsRaspi) { 'Handy_{0}_{1}.deb' -f $Meta.version, $go.arch; break }
         default { throw [System.NotImplementedException]::new() }
+      }
+      Invoke-ReleaseDownload $Meta $file, $file`.sig
+      [System.IO.File]::WriteAllBytes("$file.minisig", [System.Convert]::FromBase64String([System.IO.File]::ReadAllText("$file.sig")))
+      minisign -Vm $file -P $Meta.pubkey
+      switch ($true) {
+        $IsWindows { sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file; break }
+        $IsFedora { sudo dnf install -y $buildDir/$file; break }
+        ($IsUbuntu -or $IsRaspi) { sudo apt install -y --fix-broken $buildDir/$file; break }
       }
     }
     java {

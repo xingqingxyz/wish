@@ -17,6 +17,17 @@ mods = "Control|Shift"
 action = "CreateNewWindow"
 
 [[keyboard.bindings]]
+key = "T"
+mods = "Alt|Shift"
+command = { program = "sh", args = ["-c", '''
+  if [ "$(alacritty msg get-config | jq .window.opacity)" != 1.0 ]; then
+    alacritty msg config window.opacity=1.0
+  else
+    alacritty msg config window.opacity=0.5
+  fi
+'''] }
+
+[[keyboard.bindings]]
 key = "+"
 mods = "Alt|Shift"
 command = { program = "alacritty", args = [

@@ -4,15 +4,6 @@
 . $PSScriptRoot/Initialize-Dotfiles.ps1
 # tasks
 . $PSScriptRoot/Initialize-Tasks.ps1
-# powershell
-Set-PSRepository PSGallery -InstallationPolicy Trusted
-# restore project
-git submodule init ./alacritty-theme
-git submodule update --depth 1 ./alacritty-theme
-Install-Module PSToml, Yayaml
-Update-Release dotnet, uv
-dotnet build -c Release
-uv sync --upgrade
 
 if ($IsWindows) {
   sudo pwsh -nop $PSScriptRoot/Initialize-WindowsMachine.ps1
@@ -34,4 +25,8 @@ New-Item -ItemType SymbolicLink -Force -Target ConsoleHost_history.txt "$dir/Vis
 # update help
 Update-Help -UICulture en-US -ea Ignore
 # system pkgs
+Set-PSRepository PSGallery -InstallationPolicy Trusted
+Install-Module PSToml, Yayaml
 Update-System -Force
+# build
+. $PSScriptRoot/../make.ps1 -Build

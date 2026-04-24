@@ -26,7 +26,6 @@ if ($PSVersionTable.OS.StartsWith('Fedora ')) {
   # remove some packages
   $pkgs = @(
     'evince'
-    'gnome-calculator'
     'gnome-text-editor'
     'ibus'
     'nano'
@@ -46,15 +45,12 @@ URIs: https://mirrors.tuna.tsinghua.edu.cn/ubuntu
 Suites: $label $label-updates $label-backports $label-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-"@ -Force
-  # llvm
-  Invoke-RestMethod 'https://apt.llvm.org/llvm-snapshot.gpg.key' -OutFile /etc/apt/trusted.gpg.d/apt.llvm.org.asc/etc/apt/trusted.gpg.d/apt.llvm.org.asc
-  New-Item /etc/apt/sources.list.d/llvm-toolchain.sources -Value @"
+
 Types: deb
-URIs: http://apt.llvm.org/$label
-Suites: llvm-toolchain-$label-22
-Components: main
-Signed-By: /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+URIs: http://security.ubuntu.com/ubuntu/
+Suites: $label-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 "@ -Force
   # microsoft
   New-Item /etc/apt/sources.list.d/microsoft-edge.sources -Value @'
@@ -68,19 +64,13 @@ Signed-By: /usr/share/keyrings/microsoft.gpg
   ln -sf python3 /usr/bin/python
   # remove some packages
   $pkgs = @(
-    'evince'
-    'gnome-calculator'
-    'gnome-startup-applications'
     'gnome-text-editor'
     'ibus'
     'nano'
-    'tree'
+    'ptyxis'
     'update-manager-core'
-    'vim*'
   )
   apt purge -y --auto-remove $pkgs
-  snap remove --purge firmware-updater snap-store
-  snap refresh
 }
 elseif ($PSVersionTable.OS.StartsWith('Debian ') -and
   [RuntimeInformation]::OSArchitecture -eq [Architecture]::Arm64) {

@@ -1,14 +1,15 @@
 # ensure English home dirs
-if ($PSCulture -cne 'en-US' -and (Get-Content -Raw -LiteralPath ~/.config/user-dirs.locale) -cnotmatch '^(C|en_US|en_GB)$') {
+if ($PSCulture -cne 'en-US') {
   [string[]]$prevDirs = Get-Content -LiteralPath ~/.config/user-dirs.dirs | ForEach-Object { if ($_.StartsWith('XDG_')) { $_.Split('/', 2)[1].TrimEnd('"') } }
   env LC_ALL=C xdg-user-dirs-update --force
+  $PSCulture.Replace('-', '_') > ~/.config/user-dirs.locale
   [string[]]$newDirs = Get-Content -LiteralPath ~/.config/user-dirs.dirs | ForEach-Object { if ($_.StartsWith('XDG_')) { $_.Split('/', 2)[1].TrimEnd('"') } }
   Set-Location
-  $null = New-Item -ItemType Directory $newDirs -ea Ignore
+  New-Item -ItemType Directory $newDirs -ea Ignore
   for ($i = 0; $i -lt $prevDirs.Count; $i++) {
     if (Test-Path -LiteralPath $newDirs[$i] -PathType Leaf) {
       Move-Item -LiteralPath $newDirs[$i] "$($newDirs[$i]).bak"
-      $null = New-Item -ItemType Directory $newDirs[$i]
+      New-Item -ItemType Directory $newDirs[$i]
     }
     if ($newDirs[$i] -ceq $prevDirs[$i]) {
       continue
@@ -22,6 +23,7 @@ if ($PSCulture -cne 'en-US' -and (Get-Content -Raw -LiteralPath ~/.config/user-d
 }
 # data dirs for GithubRelease
 [string[]]$dirs = @(
+  "$HOME/.config/systemd/user"
   "$HOME/.local/bin"
   "$HOME/.local/share/applications"
   "$HOME/.local/share/bash-completion/completions"
@@ -42,8 +44,9 @@ if (Get-Command flatpak -CommandType Application -TotalCount 1 -ea Ignore) {
 }
 # autostart
 New-Item -ItemType Directory ~/.config/autostart -Force
-[string[]]$desktop = switch ((Get-Command fcitx5, wechat, alacritty, ghostty, kitty -CommandType Application -TotalCount 1 -ea Ignore).Name) {
+[string[]]$desktop = switch ((Get-Command fcitx5, handy, wechat, alacritty, ghostty, kitty -CommandType Application -TotalCount 1 -ea Ignore).Name) {
   'fcitx5' { 'org.fcitx.Fcitx5.desktop'; continue }
+  'handy' { 'Handy.desktop'; continue }
   'wechat' { 'wechat.desktop'; continue }
   'alacritty' { 'Alacritty.desktop'; break }
   'ghostty' { 'com.mitchellh.ghostty.desktop'; break }

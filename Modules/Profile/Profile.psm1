@@ -53,6 +53,7 @@ function Format-Duration {
 
 function Get-PowerShellExecArgs {
   [CmdletBinding()]
+  [OutputType([string[]])]
   param (
     [Parameter(Mandatory, Position = 0, ValueFromRemainingArguments)]
     [System.Object[]]
@@ -65,7 +66,8 @@ function Get-PowerShellExecArgs {
     return $ArgumentList
   }
   if ($ArgumentList[0] -is [scriptblock]) {
-    [string[]]$ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
+    $ArgumentList[0] = '$ErrorActionPreference = "Stop"; $PSNativeCommandUseErrorActionPreference = $true; ' + $ArgumentList[0]
+    $ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
     for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
       if ($ArgumentList[$i].StartsWith('-')) {
         continue
@@ -74,7 +76,6 @@ function Get-PowerShellExecArgs {
     }
     return $ArgumentList
   }
-  [string[]]$ArgumentList = $ArgumentList
   $info = Get-Command $ArgumentList[0]
   if ($info.CommandType -ceq 'Alias') {
     $info = $info.ResolvedCommand
@@ -84,28 +85,23 @@ function Get-PowerShellExecArgs {
       $ArgumentList[0] = $info.Source
       break
     }
-    elseif ($info.CommandType -ceq 'ExternalScript') {
-      $ArgumentList[0] = $info.Source
-      $ArgumentList = 'pwsh', '-nop' + $ArgumentList
-      break
-    }
-    elseif ($info.Module) {
-      $ArgumentList[0] = $info.ModuleName + '\' + $info.Name
-      if ($ExpectingInput) {
-        $ArgumentList[0] = '$input|' + $ArgumentList[0]
-      }
-      $ArgumentList = 'pwsh', '-nop', '-c' + $ArgumentList
-      for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
-        if ($ArgumentList[$i].StartsWith('-')) {
-          continue
-        }
-        $ArgumentList[$i] = "'" + $ArgumentList[$i].Replace("'", "''") + "'"
-      }
-      break
-    }
-    else {
+    elseif (!$info.Module -and $info.CommandType -cne 'ExternalScript') {
       $info = Get-Command $ArgumentList[0] -CommandType Application, ExternalScript -TotalCount 1
+      continue
     }
+    $ArgumentList[0] = $info.Module ? $info.Module.Name + '\' + $info.Name : $info.Source
+    if ($ExpectingInput) {
+      $ArgumentList[0] = '$input|' + $ArgumentList[0]
+    }
+    $ArgumentList[0] = '$ErrorActionPreference = "Stop"; $PSNativeCommandUseErrorActionPreference = $true; ' + $ArgumentList[0]
+    $ArgumentList = 'pwsh', '-nop', '-c' + $ArgumentList
+    for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
+      if ($ArgumentList[$i].StartsWith('-')) {
+        continue
+      }
+      $ArgumentList[$i] = "'" + $ArgumentList[$i].Replace("'", "''") + "'"
+    }
+    break
   }
   $ArgumentList
 }
@@ -395,7 +391,7 @@ function sudo {
   $ags = Get-PowerShellExecArgs $ags -ExpectingInput:$MyInvocation.ExpectingInput
   if ($cmd = (Get-Command sudo -CommandType Application -TotalCount 1 -ea Ignore).Source) {
     $ags = if ($ags[0] -ceq 'pwsh') {
-      $options + '-E', '--' + $ags
+      $options + '--preserve-env=PATH,PSModulePath', '--' + $ags
     }
     else {
       $options + '--' + $ags
