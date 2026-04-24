@@ -258,6 +258,9 @@ function ee {
     Write-Debug "$cmd $args"
     & $cmd $args
   }
+  if ($LASTEXITCODE) {
+    throw "$cmd exit code $LASTEXITCODE"
+  }
 }
 
 function env {
@@ -288,6 +291,9 @@ function env {
       Write-Debug "$cmd $ags"
       & $cmd $ags
     }
+    if ($LASTEXITCODE) {
+      throw "$cmd exit code $LASTEXITCODE"
+    }
   }
   finally {
     $savedEnvMap.GetEnumerator().ForEach{
@@ -316,6 +322,9 @@ function npm {
     Write-Debug "$cmd $ags"
     & $cmd $ags
   }
+  if ($LASTEXITCODE) {
+    throw "npm exit code $LASTEXITCODE"
+  }
 }
 
 function npx {
@@ -338,6 +347,9 @@ function npx {
   else {
     Write-Debug "$cmd $ags"
     & $cmd $ags
+  }
+  if ($LASTEXITCODE) {
+    throw "npx exit code $LASTEXITCODE"
   }
 }
 
@@ -395,6 +407,9 @@ function sudo {
     else {
       Write-Debug "$cmd $ags"
       & $cmd $ags
+    }
+    if ($LASTEXITCODE) {
+      throw "sudo exit code $LASTEXITCODE"
     }
     return
   }
@@ -525,6 +540,9 @@ done
   }
   Write-Debug "$cmd $ags"
   & $cmd $ags
+  if ($LASTEXITCODE) {
+    throw "x exit code $LASTEXITCODE"
+  }
 }
 #endregion
 

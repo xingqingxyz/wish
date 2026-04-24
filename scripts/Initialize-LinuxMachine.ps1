@@ -57,13 +57,7 @@ Components: main
 Signed-By: /etc/apt/trusted.gpg.d/apt.llvm.org.asc
 "@ -Force
   # microsoft
-  New-Item /etc/apt/sources.list.d/microsoft.sources -Value @'
-Types: deb
-URIs: https://packages.microsoft.com/repos/code
-Suites: stable
-Components: main
-Signed-By: /usr/share/keyrings/microsoft.gpg
-
+  New-Item /etc/apt/sources.list.d/microsoft-edge.sources -Value @'
 Types: deb
 URIs: https://packages.microsoft.com/repos/edge
 Suites: stable

@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
 # ===================== 配置项 =====================
-$WALLPAPER_DIR = Convert-Path ~/Pictures/bing_wallpapers
+$WALLPAPER_DIR = "$HOME/Pictures/bing_wallpapers"
 $RESOLUTION = 'UHD'
 $REGION = 'zh-CN'
 # ===================== /配置项 =====================

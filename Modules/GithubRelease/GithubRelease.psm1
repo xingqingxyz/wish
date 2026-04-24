@@ -27,7 +27,7 @@ function Update-Release {
       return Write-Warning "skipping unknown pkg $_"
     }
     if (Update-LatestVersion $pkgMap[$_] -Force:$Force) {
-      Install-Release $pkgMap[$_] -ea 'Continue'
+      try { Install-Release $pkgMap[$_] } catch {}
     }
   }
   $pkgMap.Values | ConvertTo-Yaml > $PSScriptRoot/releases.yml
@@ -450,12 +450,12 @@ function Invoke-FileDownload ([string]$Url, [string]$Path) {
 }
 
 function Invoke-ReleaseDownload ($Meta, [string[]]$Name) {
-  $Name.ForEach{
-    if (Test-Path -LiteralPath $buildDir/$_) {
-      execute aria2c "http://github.com/$($Meta.repo)/releases/download/$($Meta.tag)/$_" -c -x2 -j32 --allow-overwrite "--file-allocation=$($IsWindows ? 'prealloc' : 'falloc')" -d $buildDir >> $buildDir/aria2c.log
-      return
-    }
-    execute gh release download -R $Meta.repo -p $_ -D $buildDir $Meta.tag
+  $existed, $Name = $Name.Where({ Test-Path -LiteralPath $buildDir/$_ }, 'Split')
+  if ($existed) {
+    $existed.ForEach{ "http://github.com/$($Meta.repo)/releases/download/$($Meta.tag)/$_"; " out=$_" } | execute aria2c -c -x2 -j32 --allow-overwrite --file-allocation=$($IsWindows ? 'prealloc' : 'falloc') -d $buildDir >> $buildDir/aria2c.log
+  }
+  if ($Name) {
+    execute gh release download -R $Meta.repo @($Name.ForEach{ '-p' + $_ }) -D $buildDir $Meta.tag
   }
 }
 
@@ -463,6 +463,7 @@ function Get-LocalVersion ([string]$Name) {
   try {
     $line = switch ($Name) {
       binaryen { wasm2js --version; break }
+      go { go version; break }
       less { (less --version 2>$null)[0].Split(' ', 3)[1] + '.0'; break }
       wabt { wat2wasm --version; break }
       vncviewer {
@@ -913,6 +914,46 @@ function Install-Release {
       Invoke-ReleaseDownload $Meta $file
       sudo $buildDir/$file
       break
+    }
+    handy {
+      switch ($true) {
+        $IsWindows {
+          $file = 'Handy_{0}_{1}.msi' -f $Meta.version, [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+          Invoke-ReleaseDownload $Meta $file, $file`.sig
+          gpg --verify $buildDir/$file.sig $buildDir/$file
+          sudo msiexec /qn /norestart /log "${env:TEMP}msiexec.log" /i $buildDir/$file
+          break
+        }
+        $IsMacOS {
+          $arch = switch ([RuntimeInformation]::OSArchitecture) {
+            'X64' { 'x64'; break }
+            'Arm64' { 'aarch64'; break }
+            default { throw [System.NotImplementedException]::new() }
+          }
+          $file = 'Handy_{0}_{1}.dmg' -f $Meta.version, $rust.arch
+          Invoke-ReleaseDownload $Meta $file
+          sudo hdiutil attach $buildDir/$file -nobrowse -quiet
+          sudo cp -R /Volumes/Handy/Handy.app $prefixDir/handy
+          sudo ln -sf $prefixDir/handy/Contents/MacOS/Handy $binDir/handy
+          sudo hdiutil detach /Volumes/Handy -quiet
+          break
+        }
+        $IsFedora {
+          $file = 'handy-{0}-1.{1}.rpm' -f $Meta.version, $rust.arch
+          Invoke-ReleaseDownload $Meta $file, $file`.sig
+          gpg --verify $buildDir/$file.sig $buildDir/$file
+          sudo dnf install -y $buildDir/$file
+          break
+        }
+        ($IsUbuntu -or $IsRaspi) {
+          $file = 'handy_{0}_{1}.deb' -f $Meta.version, $go.arch
+          Invoke-ReleaseDownload $Meta $file, $file`.sig
+          gpg --verify $buildDir/$file.sig $buildDir/$file
+          sudo dpkg -i $buildDir/$file
+          break
+        }
+        default { throw [System.NotImplementedException]::new() }
+      }
     }
     java {
       if (!$IsLinux) {
