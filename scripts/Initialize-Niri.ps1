@@ -17,4 +17,4 @@ else {
   throw [System.NotImplementedException]::new()
 }
 # vscode
-node $PSScriptRoot/niri-patch-vscode.ts code
+& $PSScriptRoot/niri-patch-vscode.ts vscode

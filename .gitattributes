@@ -1,5 +1,9 @@
 * text=auto eol=lf
+/_/.codebuddy/settings.json linguist-generated=true
+/_/.config/DankMaterialShell/settings.json linguist-generated=true
 /_/.config/fcitx5/** linguist-generated=true
 /_/.config/niri/dms/** linguist-generated=true
+/_/.local/share/com.pais.handy/settings_store.json linguist-generated=true
+/scripts/data/custom-keybindings.ini linguist-generated=true
 /scripts/data/gnome-shell.ini linguist-generated=true
 /scripts/data/schema.docs.graphql linguist-vendored=true

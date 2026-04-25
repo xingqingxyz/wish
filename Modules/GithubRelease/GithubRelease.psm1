@@ -84,6 +84,9 @@ function Update-Software {
       if ($pkgs) {
         sudo apt install -y $pkgs
       }
+      if ($pkgs.Contains('clang-22')) {
+        Split-Path -Resolve -Leaf /bin/*-22 | ForEach-Object { sudo ln -s $_ /bin/$($_.Substring(0, $_.Length-3)) }
+      }
       continue
     }
     brew {
@@ -606,6 +609,7 @@ function Install-Release {
   [CmdletBinding()]
   param (
     [Parameter(Mandatory, Position = 0)]
+    [System.Object]
     $Meta
   )
   Write-Information "Installing $($Meta.name)@$($Meta.version)"
@@ -629,13 +633,13 @@ function Install-Release {
     balenaEtcher {
       switch ($true) {
         $IsFedora {
-          $file = "balena-etcher-$($Meta.version)-1.x86_64.rpm"
+          $file = 'balena-etcher-{0}-1.{1}.rpm' -f $Meta.version, $rust.arch
           Invoke-ReleaseDownload $Meta $file
           sudo dnf install -y $buildDir/$file
           break
         }
         ($IsUbuntu -or $IsRaspi) {
-          $file = "balena-etcher_$($Meta.version)_amd64.deb"
+          $file = 'balena-etcher_{0}_{1}.deb' -f $Meta.version, $go.arch
           Invoke-ReleaseDownload $Meta $file
           sudo dpkg -i $buildDir/$file
           break
@@ -645,6 +649,9 @@ function Install-Release {
       break
     }
     bash {
+      if ($IsWindows) {
+        throw [System.NotImplementedException]::new()
+      }
       $base = 'bash-{0}' -f $Meta.version
       $file = "$base.tar.gz"
       Invoke-FileDownload "https://mirrors.tuna.tsinghua.edu.cn/gnu/bash/$file"
@@ -665,8 +672,8 @@ function Install-Release {
     binaryen {
       $os = switch ($true) {
         $IsLinux { 'linux'; break }
-        $IsWindows { 'windows'; break }
         $IsMacOS { 'macos'; break }
+        $IsWindows { 'windows'; break }
         default { throw [System.NotImplementedException]::new() }
       }
       $file = 'binaryen-{0}-{1}-{2}.tar.gz' -f $Meta.tag, $rust.arch, $os
@@ -676,20 +683,18 @@ function Install-Release {
       break
     }
     bun {
-      if (!$IsLinux) {
-        throw [System.NotImplementedException]::new()
-      }
       $arch = switch ([RuntimeInformation]::OSArchitecture) {
         'Arm64' { 'aarch64'; break }
         'X64' { 'x64'; break }
         default { throw [System.NotImplementedException]::new() }
       }
-      $file = 'bun-{0}-{1}.zip' -f $go.os, $arch
+      $base = 'bun-{0}-{1}' -f $go.os, $arch
+      $file = $base + '.zip'
       Invoke-ReleaseDownload $Meta $file, SHASUMS256.txt
       Assert-FileHash $file SHASUMS256.txt
       Expand-Archive -LiteralPath $buildDir/$file $buildDir -Force
-      Move-Item -LiteralPath $buildDir/$(Split-Path -LeafBase $file)/bun $binDir -Force
-      $null = New-Item -ItemType SymbolicLink -Force -Target bun $binDir/bunx
+      Move-Item -LiteralPath $buildDir/$base/bun$exe $binDir -Force
+      $null = New-Item -ItemType SymbolicLink -Force -Target bun$exe $binDir/bunx$exe
       break
     }
     cargo-generate {
@@ -699,13 +704,13 @@ function Install-Release {
       break
     }
     code {
+      $arch = [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
       switch ($true) {
         $IsFedora {
-          sudo dnf install -y 'https://update.code.visualstudio.com/latest/linux-rpm-x64/stable'
+          sudo dnf install -y "https://update.code.visualstudio.com/latest/linux-rpm-$arch/stable"
           break
         }
         ($IsUbuntu -or $IsRaspi) {
-          $arch = [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
           Invoke-FileDownload "https://update.code.visualstudio.com/latest/linux-deb-$arch/stable" $buildDir/code.deb
           sudo dpkg -i $buildDir/code.deb
           break
@@ -741,9 +746,6 @@ function Install-Release {
       break
     }
     deno {
-      if ($IsWindows) {
-        throw [System.NotImplementedException]::new()
-      }
       $file = 'deno-{0}.zip' -f $rust.target
       Invoke-ReleaseDownload $Meta $file, $file.sha256sum
       Assert-FileHash $file $file.sha256sum
@@ -798,7 +800,7 @@ function Install-Release {
         $IsLinux {
           break # FIXME: after edit-1.2.1
           $base = 'edit-{0}-{1}-linux-gnu' -f $Meta.version, $rust.arch
-          Invoke-ReleaseDownload $Meta $base.tar.zst
+          Invoke-ReleaseDownload $Meta $base`.tar.zst
           tar -xf $buildDir/$base.tar.zst --zstd -C $buildDir
           break
         }
@@ -831,19 +833,19 @@ function Install-Release {
       break
     }
     gh {
-      if (!$IsLinux) {
-        throw [System.NotImplementedException]::new()
+      $ext = switch ($true) {
+        $IsFedora { '.rpm'; break }
+        ($IsUbuntu -or $IsRaspi) { '.deb'; break }
+        $IsLinux { '.tar.gz'; break }
+        default { throw [System.NotImplementedException]::new() }
       }
-      $file = 'gh_{0}_{1}_{2}' -f $Meta.version, $go.os, $go.arch
-      if ($IsFedora) {
-        $file += '.rpm'
-        Invoke-ReleaseDownload $Meta $file
-        sudo dnf install -y $buildDir/$file
-      }
-      elseif ($IsUbuntu -or $IsRaspi) {
-        $file += '.deb'
-        Invoke-ReleaseDownload $Meta $file
-        sudo apt install -y $buildDir/$file
+      $file = 'gh_{0}_{1}_{2}{3}' -f $Meta.version, $go.os, $go.arch, $ext
+      Invoke-ReleaseDownload $Meta $file, "gh_$($Meta.version)_checksums.txt"
+      Assert-FileHash $file "gh_$($Meta.version)_checksums.txt"
+      switch ($true) {
+        $IsFedora { sudo dnf install -y $buildDir/$file; break }
+        ($IsUbuntu -or $IsRaspi) { sudo dpkg -i $buildDir/$file; break }
+        $IsLinux { tar -xf $buildDir/$file -C $binDir --strip-components=1; break }
       }
       break
     }
@@ -900,18 +902,18 @@ function Install-Release {
       break
     }
     golangci-lint {
-      $base = 'golangci-lint-{0}-{1}-{2}' -f $Meta.version, $go.os, $go.arch
-      Invoke-ReleaseDownload $Meta $base$ext, "golangci-lint-$($Meta.version)-checksums.txt"
-      Assert-FileHash $base$ext "golangci-lint-$($Meta.version)-checksums.txt"
-      tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
+      $file = 'golangci-lint-{0}-{1}-{2}{3}' -f $Meta.version, $go.os, $go.arch, $ext
+      Invoke-ReleaseDownload $Meta $file, "golangci-lint-$($Meta.version)-checksums.txt"
+      Assert-FileHash $file "golangci-lint-$($Meta.version)-checksums.txt"
+      tar -xf $buildDir/$file -C $buildDir --strip-components=1
       Move-Item -LiteralPath $buildDir/golangci-lint$exe $binDir -Force
       break
     }
     goreleaser {
       $os = $go.os.Substring(0, 1).ToUpperInvariant() + $go.os.Substring(1)
-      $base = 'goreleaser_{0}_{1}' -f $os, $rust.arch
-      Invoke-ReleaseDownload $Meta $base$ext
-      tar -xf $buildDir/$base$ext -C $buildDir
+      $file = 'goreleaser_{0}_{1}{2}' -f $os, $rust.arch, $ext
+      Invoke-ReleaseDownload $Meta $file
+      tar -xf $buildDir/$file -C $buildDir
       Move-Item -LiteralPath $buildDir/goreleaser$exe $binDir -Force
       Move-Item -LiteralPath $buildDir/manpages/goreleaser.1.gz $dataDir/man/man1 -Force
       Move-Item -LiteralPath $buildDir/completions/goreleaser.bash $dataDir/bash-completion/completions -Force
@@ -941,14 +943,14 @@ function Install-Release {
         sudo hdiutil detach /Volumes/Handy -quiet
         break
       }
-      if (!$Meta.pubkey) {
-        $Meta.pubkey = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((Invoke-RestMethod "https://github.com/$($Meta.repo)/raw/HEAD/src-tauri/tauri.conf.json").plugins.updater.pubkey)).Split("`n", 3)[1]
-      }
       $file = switch ($true) {
         $IsWindows { 'Handy_{0}_{1}.msi' -f $Meta.version, [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant(); break }
         $IsFedora { 'Handy-{0}-1.{1}.rpm' -f $Meta.version, $rust.arch; break }
         ($IsUbuntu -or $IsRaspi) { 'Handy_{0}_{1}.deb' -f $Meta.version, $go.arch; break }
         default { throw [System.NotImplementedException]::new() }
+      }
+      if (!$Meta.pubkey) {
+        $Meta.pubkey = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((Invoke-RestMethod "https://github.com/$($Meta.repo)/raw/HEAD/src-tauri/tauri.conf.json").plugins.updater.pubkey)).Split("`n", 3)[1]
       }
       Invoke-ReleaseDownload $Meta $file, $file`.sig
       [System.IO.File]::WriteAllBytes("$file.minisig", [System.Convert]::FromBase64String([System.IO.File]::ReadAllText("$file.sig")))
@@ -985,8 +987,8 @@ function Install-Release {
     jq {
       $os = switch ($true) {
         $IsLinux { 'linux'; break }
-        $IsWindows { 'windows'; break }
         $IsMacOS { 'macos'; break }
+        $IsWindows { 'windows'; break }
         default { throw [System.NotImplementedException]::new() }
       }
       $file = 'jq-{0}-{1}{2}' -f $os, $go.arch, $exe
@@ -1022,9 +1024,14 @@ function Install-Release {
       if (!$IsLinux) {
         throw [System.NotImplementedException]::new()
       }
-      $base = 'LocalSend-{0}-{1}-x86-64' -f $Meta.version, $rust.os
-      Invoke-ReleaseDownload $Meta $base$ext
-      tar -xf $buildDir/$base$ext -C (New-EmptyDir $prefixDir/localsend)
+      $arch = switch ([RuntimeInformation]::OSArchitecture) {
+        'X64' { 'x86-64'; break }
+        'Arm64' { 'arm-64'; break }
+        default { throw [System.NotImplementedException]::new() }
+      }
+      $file = 'LocalSend-{0}-{1}-{2}{3}' -f $Meta.version, $rust.os, $arch, $ext
+      Invoke-ReleaseDownload $Meta $file
+      tar -xf $buildDir/$file -C (New-EmptyDir $prefixDir/localsend)
       @"
 [Desktop Entry]
 Icon=$prefixDir/localsend/data/flutter_assets/assets/img/logo-512.png
@@ -1070,17 +1077,20 @@ StartupWMClass=localsend_app
       break
     }
     nerd-fonts {
-      Invoke-ReleaseDownload $Meta 0xProto.zip
-      Expand-Archive -LiteralPath $buildDir/0xProto.zip $buildDir -Force
+      Invoke-ReleaseDownload $Meta $Meta.fonts.ForEach{ $_ + '.tar.xz' }
       switch ($true) {
         $IsWindows {
+          $Meta.fonts.ForEach{ tar -xf $buildDir/$_.tar.xz -C $buildDir }
           $shellApp = New-Object -ComObject shell.application
           $fonts = $shellApp.NameSpace(0x14)
-          Convert-Path $buildDir/0xProtoNerdFont*.ttf | ForEach-Object { $fonts.MoveHere($_) }
+          Convert-Path $buildDir/*.ttf | ForEach-Object { $fonts.MoveHere($_) }
           break
         }
         $IsLinux {
-          sudo mv $buildDir/0xProtoNerdFont*.ttf /usr/share/fonts/truetype/
+          $Meta.fonts.ForEach{
+            sudo mkdir -p /usr/share/fonts/truetype/$_
+            sudo tar -xf $buildDir/$_.tar.xz -C /usr/share/fonts/truetype/$_
+          }
           sudo fc-cache -v
           break
         }
@@ -1095,9 +1105,9 @@ StartupWMClass=localsend_app
         default { throw [System.NotImplementedException]::new() }
       }
       $file = switch ($true) {
-        $IsWindows { "node-$($Meta.tag)-$arch.msi"; break }
         $IsLinux { "node-$($Meta.tag)-linux-$arch.tar.xz"; break }
         $IsMacOS { "node-$($Meta.tag).pkg"; break }
+        $IsWindows { "node-$($Meta.tag)-$arch.msi"; break }
         default { throw [System.NotImplementedException]::new() }
       }
       Invoke-FileDownload "https://nodejs.org/dist/$($Meta.tag)/$file"
@@ -1188,8 +1198,7 @@ StartupWMClass=localsend_app
       $base = 'ripgrep_all-{0}-{1}' -f $Meta.tag, ($rust.arch -ceq 'x86_64' ? $rust.target -creplace '-gnu$', '-musl' : $rust.target)
       Invoke-ReleaseDownload $Meta $base$ext
       tar -xf $buildDir/$base$ext -C $buildDir --strip-components=1
-      [string[]]$files = 'rga', 'rga-fzf', 'rga-fzf-open', 'rga-preproc'
-      $files = $files.ForEach{ "$buildDir/$_$exe" }
+      $files = ('rga', 'rga-fzf', 'rga-fzf-open', 'rga-preproc').ForEach{ "$buildDir/$_$exe" }
       Move-Item -LiteralPath $files $binDir -Force
       break
     }
@@ -1205,9 +1214,6 @@ StartupWMClass=localsend_app
       break
     }
     sing-box {
-      if ($IsWindows) {
-        throw [System.NotImplementedException]::new()
-      }
       $suffix = if ($IsLinux) { '-glibc.tar.gz' } else { $ext }
       $file = 'sing-box-{0}-{1}-{2}{3}' -f $Meta.version, $go.os, $go.arch, $suffix
       Invoke-ReleaseDownload $Meta $file
@@ -1230,9 +1236,9 @@ StartupWMClass=localsend_app
         throw [System.NotImplementedException]::new()
       }
       $os = $IsMacOS ? 'macos' : 'linux'
-      $base = 'tmux-{0}-{1}-{2}' -f $Meta.tag.Substring(1), $os, $rust.arch
-      Invoke-ReleaseDownload $Meta $base$ext
-      tar -xf $buildDir/$base$ext -C $binDir
+      $file = 'tmux-{0}-{1}-{2}{3}' -f $Meta.tag.Substring(1), $os, $rust.arch, $ext
+      Invoke-ReleaseDownload $Meta $file
+      tar -xf $buildDir/$file -C $binDir
       break
     }
     tree-sitter {
@@ -1269,8 +1275,8 @@ StartupWMClass=localsend_app
     wabt {
       $os = switch ($true) {
         $IsLinux { 'linux'; break }
-        $IsWindows { 'windows'; break }
         $IsMacOS { 'macos'; break }
+        $IsWindows { 'windows'; break }
         default { throw [System.NotImplementedException]::new() }
       }
       $file = 'wabt-{0}-{1}-{2}.tar.gz' -f $Meta.tag, $os, [RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
@@ -1325,10 +1331,18 @@ StartupWMClass=localsend_app
       break
     }
     zed {
-      if ($IsWindows) {
-        throw [System.NotImplementedException]::new()
+      $file = switch ($true) {
+        $IsLinux { 'Zed-linux-{0}.tar.gz' -f $rust.arch; break }
+        $IsMacOS { 'Zed-{0}.dmg' -f $rust.arch; break }
+        $IsWindows { 'Zed-{0}.exe' -f $rust.arch; break }
+        default { throw [System.NotImplementedException]::new() }
       }
-      curl -f 'https://zed.dev/install.sh' | sh
+      Invoke-ReleaseDownload $Meta $file
+      switch ($true) {
+        $IsLinux { tar -xf $buildDir/$file -C $binDir --strip-components=1; break }
+        $IsMacOS { sudo installer -pkg $buildDir/$file -dumplog > Temp:/$file.log; break }
+        $IsWindows { Move-Item -LiteralPath $buildDir/$file $binDir/Zed.exe -Force; break }
+      }
       break
     }
     { $_ -ceq 'bat' -or $_ -ceq 'diskus' -or $_ -ceq 'fd' -or $_ -ceq 'hexyl' -or $_ -ceq 'hyperfine' } {

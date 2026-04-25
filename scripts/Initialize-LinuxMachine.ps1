@@ -52,10 +52,26 @@ Suites: $label-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 "@ -Force
+  # google
+  New-Item /etc/apt/sources.list.d/google-chrome.sources -Value @'
+X-Repolib-Name: Google Chrome
+Types: deb
+URIs: https://dl.google.com/linux/chrome-stable/deb/
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/google-chrome.gpg
+'@ -Force
   # microsoft
   New-Item /etc/apt/sources.list.d/microsoft-edge.sources -Value @'
 Types: deb
 URIs: https://packages.microsoft.com/repos/edge
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/microsoft.gpg
+'@ -Force
+  New-Item /etc/apt/sources.list.d/vscode.sources -Value @'
+Types: deb
+URIs: https://packages.microsoft.com/repos/code
 Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/microsoft.gpg

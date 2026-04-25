@@ -103,10 +103,10 @@ Set-PSReadLineKeyHandler -Chord Alt+v -Description 'Toggle .venv environment' -S
     }
     $pythonVenvActivate {
       if ($IsWindows) {
-        . .venv/Scripts/Activate.ps1
+        .\.venv\Scripts\Activate.ps1
       }
       else {
-        . (Convert-Path .venv/bin/*.ps1)
+        ./.venv/bin/activate.ps1
       }
       [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
     }

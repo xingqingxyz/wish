@@ -4,7 +4,6 @@ apt:
   - aria2
   - build-essential
   - clang-22
-  - clangd
   - clangd-22
   - cmake
   - cosign
