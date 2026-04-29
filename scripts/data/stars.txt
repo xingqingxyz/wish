@@ -9,6 +9,7 @@ astral-sh/uv
 AvengeMedia/DankMaterialShell
 awesome-css-group/awesome-css
 badboy/mdbook-mermaid
+BuddiesOfBudgie/budgie-desktop
 BurntSushi/jiff
 BurntSushi/ripgrep
 cargo-generate/cargo-generate

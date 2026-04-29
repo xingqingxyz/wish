@@ -14,8 +14,9 @@ Register-ArgumentCompleter -Native -CommandName lldb, rust-lldb -ScriptBlock {
         break
       }
       default {
-        if (!$wordToComplete.StartsWith('-')) {
+        if ($wordToComplete.StartsWith('-')) {
           '--attach-name', '--attach-pid', '-n', '-p', '--wait-for', '-w', '--batch', '-b', '-K', '-k', '--local-lldbinit', '--no-lldbinit', '--one-line-before-file', '--one-line-on-crash', '--one-line', '-O', '-o', '-Q', '--source-before-file', '--source-on-crash', '--source-quietly', '--source', '-S', '-s', '-x', '--arch', '-a', '--core', '-c', '--debug', '-d', '--editor', '-e', '--file', '-f', '--help', '-h', '--no-use-colors', '--version', '-v', '-X', '-r=', '--repl-language', '--repl=', '--repl', '-R', '-r', '-l', '--print-script-interpreter-info', '--python-path', '-P', '--script-language'
+          break
         }
         break
       }

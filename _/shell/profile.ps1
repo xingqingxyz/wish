@@ -6,7 +6,7 @@ $PSNativeCommandUseErrorActionPreference = $true
 #region common
 $root = [System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $PSCommandPath).ResolvedTarget)
 # PSES
-if (Get-Module PowerShellEditorServices.Commands -ea Ignore) {
+if ($psEditor) {
   . $root/onEnterPSES.ps1
 }
 # load
@@ -69,6 +69,9 @@ if ($IsWindows) {
       if (!$?) {
         throw "cannot show winget package ($id)"
       }
+      if ($psEditor) {
+        return
+      }
       $ok = Read-Host "Install $id`? (Y/N)"
       if ($ok -eq 'y') {
         sudo winget install -s winget --accept-package-agreements --no-vt --id $id
@@ -101,11 +104,12 @@ elseif ($IsLinux) {
         if (!$name) {
           return
         }
-        # stdout and stderr are ignored
-        %cmd% info $name | Out-Host
+        %cmd% info $name 2>$null | Out-Host
+        if ($psEditor) {
+          return
+        }
         $ok = Read-Host "Install $name`? (Y/N)"
         if ($ok -eq 'y') {
-          # sudo stderr escaped
           sudo %cmd% install -y $name 2>$null
           if ($?) {
             $e.CommandScriptBlock = [scriptblock]::Create("if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")

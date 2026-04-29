@@ -1,7 +1,7 @@
 # ensure English home dirs
 if ($PSCulture -cne 'en-US') {
   [string[]]$prevDirs = Get-Content -LiteralPath ~/.config/user-dirs.dirs | ForEach-Object { if ($_.StartsWith('XDG_')) { $_.Split('/', 2)[1].TrimEnd('"') } }
-  env LC_ALL=C xdg-user-dirs-update --force
+  env LC_ALL=en_US xdg-user-dirs-update --force
   $PSCulture.Replace('-', '_') > ~/.config/user-dirs.locale
   [string[]]$newDirs = Get-Content -LiteralPath ~/.config/user-dirs.dirs | ForEach-Object { if ($_.StartsWith('XDG_')) { $_.Split('/', 2)[1].TrimEnd('"') } }
   Set-Location
@@ -33,6 +33,8 @@ if ($PSCulture -cne 'en-US') {
   1..8 | ForEach-Object { "$HOME/.local/share/man/man$_" }
 )
 New-Item -ItemType Directory $dirs -Force
+# history
+New-Item -ItemType SymbolicLink -Force -Target ConsoleHost_history.txt "$HOME/.local/share/powershell/PSReadLine/Visual Studio Code Host_history.txt"
 #region gpg
 # gnu
 Invoke-RestMethod 'https://mirrors.ustc.edu.cn/gnu/gnu-keyring.gpg' -OutFile /tmp/gnu-keyring.gpg

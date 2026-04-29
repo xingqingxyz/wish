@@ -241,25 +241,7 @@ function cd.... {
   Set-Location -LiteralPath ../../..
 }
 
-function ee {
-  $cmd = switch -CaseSensitive -Wildcard ($env:TERM_PROGRAM) {
-    'vscode*' { ${env:TERM_PRODUCT}?.ToLowerInvariant() ?? $_.Substring(2); break }
-    default { $env:EDITOR ?? 'edit'; break }
-  }
-  if ($MyInvocation.ExpectingInput) {
-    Write-Debug "| $cmd $args"
-    $input | & $cmd $args
-  }
-  else {
-    Write-Debug "$cmd $args"
-    & $cmd $args
-  }
-  if ($LASTEXITCODE) {
-    throw "$cmd exit code $LASTEXITCODE"
-  }
-}
-
-function env {
+function uev {
   $reEnv = [regex]::new('^\w+=')
   $envMap = [Dictionary[string, string]]::new()
   $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
@@ -309,7 +291,7 @@ function npm {
     default { 'npm'; break }
   }
   $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
-  [string[]]$ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
+  $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   if ($MyInvocation.ExpectingInput) {
     Write-Debug "| $cmd $ags"
     $input | & $cmd $ags
@@ -327,12 +309,11 @@ function npx {
   $cmd, $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   $cmd = (Get-Command ./node_modules/.bin/$cmd, $cmd -CommandType Application -TotalCount 1 -ea Ignore)?[0].Source
   if (!$cmd) {
-    # fallback to handle options
     $cmd, $ags = @(switch ($true) {
-        (Test-Path -LiteralPath pnpm-lock.yaml) { 'pnpm', 'dlx'; break }
-        (Test-Path -LiteralPath yarn.lock) { 'yarn', 'dlx'; break }
+        (Test-Path -LiteralPath pnpm-lock.yaml) { 'pnpm', 'exec'; break }
+        (Test-Path -LiteralPath yarn.lock) { 'yarn', 'exec'; break }
         (Test-Path bun.lock?) { 'bun', 'x'; break }
-        default { 'npm', 'exec'; break }
+        default { 'npm', 'exec', '--'; break }
       }) + $ags
     $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
   }
@@ -484,7 +465,7 @@ function x {
     $ags.Replace('"', '""') | Join-String -Separator '" "' -OutputPrefix '"' -OutputSuffix '"'
   }
   else {
-    $ags.Replace('"', '""') | Join-String -Separator "' '" -OutputPrefix "'" -OutputSuffix "'"
+    $ags.Replace("'", "'\''") | Join-String -Separator "' '" -OutputPrefix "'" -OutputSuffix "'"
   }
   if ($MyInvocation.ExpectingInput) {
     $file = [System.IO.Path]::GetTempFileName()
@@ -514,7 +495,7 @@ for /l %_ in () do (
 "@ -creplace '\r?\n\s*', ' ')
   }
   else {
-    $term + 'sh', '-c', @"
+    $term + 'bash', '-c', @"
 while true; do
   $ags
   ec=`$?

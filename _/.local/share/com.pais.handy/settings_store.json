@@ -37,7 +37,7 @@
     "custom_words": [],
     "debug_mode": false,
     "experimental_enabled": false,
-    "external_script_path": null,
+    "external_script_path": "/home/uv/p/wish/scripts/handy.sh",
     "extra_recording_buffer_ms": 0,
     "history_limit": 5,
     "keyboard_implementation": "tauri",
@@ -48,7 +48,7 @@
     "ort_accelerator": "auto",
     "overlay_position": "none",
     "paste_delay_ms": 60,
-    "paste_method": "direct",
+    "paste_method": "external_script",
     "post_process_api_keys": {
       "anthropic": "",
       "cerebras": "",

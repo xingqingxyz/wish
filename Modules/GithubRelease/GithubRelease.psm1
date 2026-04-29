@@ -456,7 +456,7 @@ function Invoke-FileDownload ([string]$Url, [string]$Path) {
 function Invoke-ReleaseDownload ($Meta, [string[]]$Name) {
   $existed, $Name = $Name.Where({ Test-Path -LiteralPath $buildDir/$_ }, 'Split')
   if ($existed) {
-    $existed.ForEach{ "http://github.com/$($Meta.repo)/releases/download/$($Meta.tag)/$_"; " out=$_" } | execute aria2c -c -x2 -j32 --allow-overwrite --file-allocation=$($IsWindows ? 'prealloc' : 'falloc') -d $buildDir >> $buildDir/aria2c.log
+    $existed.ForEach{ "http://github.com/$($Meta.repo)/releases/download/$($Meta.tag)/$_"; " out=$_" } | execute aria2c -i- -c -x2 -j32 --allow-overwrite --file-allocation=$($IsWindows ? 'prealloc' : 'falloc') -d $buildDir >> $buildDir/aria2c.log
   }
   if ($Name) {
     execute gh release download -R $Meta.repo $Name.ForEach{ '-p' + $_ } -D $buildDir $Meta.tag
@@ -484,7 +484,15 @@ function Get-LocalVersion ([string]$Name) {
           @(dnf list --installed wechat)[1]
           break
         }
+        elseif ($IsUbuntu) {
+          apt list --installed wechat 2>$null
+          break
+        }
         throw [System.NotImplementedException]::new()
+      }
+      wps {
+        (Get-Content -LiteralPath ~/.config/Kingsoft/Office.conf).Where({ $_.StartsWith('plugins\kaccountsdk\storage\office\appv=linux-office:linux_365:') }, 'First', 1)[0]
+        break
       }
       { $_ -ceq 'localsend' -or $_ -ceq 'nerd-fonts' } {
         (Get-Content -Raw -LiteralPath $PSScriptRoot/releases.yml | ConvertFrom-Yaml | Where-Object name -CEQ $_).version
@@ -564,6 +572,11 @@ function Update-LatestVersion ($Meta, [switch]$Force) {
     wechat {
       $html = Invoke-RestMethod 'https://linux.weixin.qq.com'
       $Meta.version = [regex]::new('<div class="main-section__bd-version" data-v-1556f5f1>([\d.]+)</div>').Match($html).Groups[1].Value
+      break
+    }
+    wps {
+      $Meta.deb, $Meta.rpm = (Invoke-WebRequest 'https://www.wps.cn/product/wpslinux#').Links.href.Where{ $_.EndsWith('.deb') -or $_.EndsWith('.rpm') }
+      $Meta.version = [regex]::Match($Meta.deb, '(\d+\.){3}\d+').Value
       break
     }
     default {
@@ -1221,6 +1234,12 @@ StartupWMClass=localsend_app
       Move-Item -LiteralPath $buildDir/sing-box$exe $binDir -Force
       break
     }
+    stylua {
+      $file = 'stylua-{0}-{1}{2}.zip' -f $rust.os, $rust.arch, ($IsLinux ? '-musl' : '')
+      Invoke-ReleaseDownload $Meta $file
+      Expand-Archive $buildDir/$file $binDir
+      break
+    }
     taplo {
       $base = 'taplo-{0}-{1}' -f $go.os, $rust.arch
       Invoke-ReleaseDownload $Meta $base.gz
@@ -1286,8 +1305,8 @@ StartupWMClass=localsend_app
     }
     wasm-bindgen {
       $file = 'wasm-bindgen-{0}-{1}.tar.gz' -f $Meta.tag, ($rust.target -creplace '-gnu$', '-musl')
-      Invoke-ReleaseDownload $Meta $file, $file.sha256sum
-      Assert-FileHash $file $file.sha256sum
+      Invoke-ReleaseDownload $Meta $file, $file`.sha256sum
+      Assert-FileHash $file $file`.sha256sum
       tar -xf $buildDir/$file -C $buildDir --strip-components=1
       Move-Item $buildDir/wasm-*$exe $binDir -Force
       break
@@ -1320,6 +1339,32 @@ StartupWMClass=localsend_app
         $IsUbuntu { sudo dpkg -i $buildDir/$file; break }
         default { Move-Item -LiteralPath $buildDir/$file $binDir/wechat -Force; chmod +x $binDir/wechat; break }
       }
+      break
+    }
+    wps {
+      if (!($IsFedora -or $IsUbuntu)) {
+        throw [System.NotImplementedException]::new()
+      }
+      $url = switch ([RuntimeInformation]::OSArchitecture) {
+        'X64' { $IsFedora ? $Meta.rpm : $Meta.deb; break }
+        'Arm64' { $IsFedora ? $Meta.rpm.Replace('x86_64', 'aarch64') : $Meta.deb.Replace('amd64', 'arm64'); break }
+        default { throw [System.NotImplementedException]::new() }
+      }
+      Invoke-FileDownload $url
+      $file = [System.IO.Path]::GetFileName($url)
+      if ($IsFedora) {
+        sudo dnf install -y $buildDir/$file
+      }
+      else {
+        sudo apt install -y $buildDir/$file
+      }
+      break
+    }
+    xan {
+      $base = 'xan-{0}' -f $rust.target
+      Invoke-ReleaseDownload $Meta $base$ext, $base`.sha256
+      Assert-FileHash $file $file`.sha256
+      tar -xf $buildDir/$base$ext -C $binDir
       break
     }
     yq {

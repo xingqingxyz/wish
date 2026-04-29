@@ -27,6 +27,7 @@ if ($All) {
     'C:\Program Files\Git\mingw64\bin\xz.exe'
     'C:\Program Files\Git\usr\bin\awk.exe'
     'C:\Program Files\Git\usr\bin\bash.exe'
+    'C:\Program Files\Git\usr\bin\env.exe'
     'C:\Program Files\Git\usr\bin\file.exe'
     'C:\Program Files\Git\usr\bin\gpg.exe'
     'C:\Program Files\Git\usr\bin\grep.exe'

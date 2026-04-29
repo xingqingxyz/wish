@@ -39,50 +39,30 @@ Set-PSReadLineKeyHandler -Chord Ctrl+F1 -Description 'Try to open powershell doc
   }
 }
 Set-PSReadLineKeyHandler -Chord Ctrl+r -Description 'Fzf select from history files to replace command line' -ScriptBlock {
-  $history = switch ($true) {
-    $IsWindows { "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\$($Host.Name)_history.txt"; break }
-    $IsLinux { "$HOME/.local/share/powershell/PSReadLine/$($Host.Name)_history.txt"; break }
-    default { throw [System.NotImplementedException]::new() }
-  }
   $text = ''
   [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$text, [ref]$null)
-  $history = Get-Content -LiteralPath $history | fzf --tac --scheme=history -q `'$($text.Split(' ',2)[0])
-  if (!$history) {
-    return
-  }
+  try { $history = Get-Content -LiteralPath (Get-PSReadLineOption).HistorySavePath | fzf --tac --scheme=history -q `'$($text.Split(' ',2)[0]) } catch { return }
   [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $text.Length, $history)
 }
 Set-PSReadLineKeyHandler -Chord Ctrl+t -Description 'Fzf select relative files to insert' -ScriptBlock {
   # note: expects "`n" not in path
-  $items = fzf '--walker=file,hidden' -m
-  if (!$items) {
-    return
-  }
+  try { $items = fzf '--walker=file,hidden' -m } catch { return }
   [Microsoft.PowerShell.PSConsoleReadLine]::Insert($items.ForEach{
       "'$([System.Management.Automation.Language.CodeGeneration]::EscapeSingleQuotedStringContent($_))'"
     } -join ' ')
 }
 Set-PSReadLineKeyHandler -Chord Alt+c -Description 'Fzf select sub directories to cd' -ScriptBlock {
   # note: expects "`n" not in path
-  $dir = fzf '--walker=dir,hidden'
-  if (!$dir) {
-    return
-  }
+  try { $dir = fzf '--walker=dir,hidden' } catch { return }
   Set-Location -LiteralPath $dir
   [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
 }
 Set-PSReadLineKeyHandler -Chord Alt+S -Description 'Fzf select stared repo name to insert' -ScriptBlock {
-  $repo = Get-Content -LiteralPath $env:WISH_ROOT/scripts/data/stars.txt | fzf --scheme=path
-  if (!$repo) {
-    return
-  }
+  try { $repo = Get-Content -LiteralPath $env:WISH_ROOT/scripts/data/stars.txt | fzf --scheme=path } catch { return }
   [Microsoft.PowerShell.PSConsoleReadLine]::Insert($repo)
 }
 Set-PSReadLineKeyHandler -Chord Alt+z -Description 'Fzf select z paths to cd' -ScriptBlock {
-  $dir = (Invoke-Z -List).Key | fzf --scheme=path
-  if (!$dir) {
-    return
-  }
+  try { $dir = (Invoke-Z -List).Key | fzf --scheme=path } catch { return }
   Invoke-Z $dir
   [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
 }

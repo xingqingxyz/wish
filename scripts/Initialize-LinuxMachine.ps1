@@ -84,7 +84,6 @@ Signed-By: /usr/share/keyrings/microsoft.gpg
     'ibus'
     'nano'
     'ptyxis'
-    'update-manager-core'
   )
   apt purge -y --auto-remove $pkgs
 }
