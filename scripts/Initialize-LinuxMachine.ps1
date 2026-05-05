@@ -9,14 +9,43 @@ New-Item -ItemType Directory /usr/local/share/jar -Force
 Set-Region 'LoadMachineEnv' @'
 if [ -f /etc/.env ]; then
   while read -r line; do
-    if [[ $line =~ ^\s*# ]]; then
-      continue
-    fi
     export "$line"
   done < /etc/.env
 fi
 '@ /etc/profile.d/sh.local -Force
+# flatpak
+if (Get-Command flatpak -CommandType Application -TotalCount 1 -ea Ignore) {
+  if ((flatpak remotes --columns=name).Contains('flathub')) {
+    sudo flatpak remote-modify flathub --url=https://mirror.sjtu.edu.cn/flathub --signature-lookaside=https://mirror.sjtu.edu.cn/flathub
+  }
+  else {
+    sudo flatpak remote-add flathub https://mirror.sjtu.edu.cn/flathub --signature-lookaside=https://mirror.sjtu.edu.cn/flathub
+  }
+}
 if ($PSVersionTable.OS.StartsWith('Fedora ')) {
+  # note: google chrome is fedora configured
+  # microsoft edge
+  New-Item /etc/yum.repos.d/microsoft-edge.repo -Value @'
+[microsoft-edge]
+name=Microsoft Edge
+baseurl=https://packages.microsoft.com/yumrepos/edge
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+enabled=1
+autorefresh=1
+type=rpm-md
+gpgcheck=1
+'@ -Force
+  # vscode
+  New-Item /etc/yum.repos.d/vscode.repo -Value @'
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+enabled=1
+autorefresh=1
+type=rpm-md
+gpgcheck=1
+'@ -Force
   # dnf copr
   $coprs = @(
     'avengemedia/dms'
@@ -30,6 +59,7 @@ if ($PSVersionTable.OS.StartsWith('Fedora ')) {
     'ibus'
     'nano'
     'ptyxis'
+    'tmux'
     'tree'
     'vim-minimal'
     'wcurl'
@@ -52,7 +82,7 @@ Suites: $label-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 "@ -Force
-  # google
+  # google chrome
   New-Item /etc/apt/sources.list.d/google-chrome.sources -Value @'
 X-Repolib-Name: Google Chrome
 Types: deb
@@ -61,7 +91,7 @@ Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/google-chrome.gpg
 '@ -Force
-  # microsoft
+  # microsoft edge
   New-Item /etc/apt/sources.list.d/microsoft-edge.sources -Value @'
 Types: deb
 URIs: https://packages.microsoft.com/repos/edge
@@ -69,6 +99,7 @@ Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/microsoft.gpg
 '@ -Force
+  # vscode
   New-Item /etc/apt/sources.list.d/vscode.sources -Value @'
 Types: deb
 URIs: https://packages.microsoft.com/repos/code

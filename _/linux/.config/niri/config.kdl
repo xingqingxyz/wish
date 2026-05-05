@@ -31,7 +31,7 @@ input {
     touchpad {
         // off
         tap
-        // dwt
+        dwt
         // dwtp
         // drag false
         // drag-lock
@@ -39,7 +39,7 @@ input {
         // accel-speed 0.2
         // accel-profile "flat"
         // scroll-method "two-finger"
-        disabled-on-external-mouse
+        // disabled-on-external-mouse
     }
 
     mouse {
@@ -305,7 +305,7 @@ animations {
     // slowdown 3.0
 }
 
-layer-rule {
+/-layer-rule {
     opacity 0.8
 }
 
@@ -313,7 +313,7 @@ layer-rule {
 // Find more information on the wiki:
 // https://yalter.github.io/niri/Configuration:-Window-Rules
 
-window-rule {
+/-window-rule {
     // match app-id=r#"^alacritty$"#
     // opacity 0.8
     background-effect {

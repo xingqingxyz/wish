@@ -1,7 +1,5 @@
 {
-  "parser-directories": [
-    "~/p"
-  ],
+  "parser-directories": ["~/p"],
   "theme": {
     "type.builtin": {
       "bold": true,

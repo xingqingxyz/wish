@@ -160,10 +160,10 @@ function Register-PSScheduledTask {
   if ($IsWindows) {
     $trigger = switch ($Interval) {
       'once' { New-ScheduledTaskTrigger -At $At -Once; break }
-      'daily' { New-ScheduledTaskTrigger -At $At -Daily -RandomDelay 1:0:0:0; break }
-      'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -RandomDelay 3:0:0:0; break }
-      'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2 -RandomDelay 7:0:0:0; break }
-      'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 15 -RandomDelay 30:0:0:0; break }
+      'daily' { New-ScheduledTaskTrigger -At $At -Daily; break }
+      'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday; break }
+      'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2; break }
+      'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 15; break }
     }
     # HACK: no show cmd window
     $action = New-ScheduledTaskAction -Execute (Get-Command uvw -Type Application -TotalCount 1).Source -Argument "run -- $Command" -WorkingDirectory $WorkingDirectory

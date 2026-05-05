@@ -18,4 +18,8 @@ explicit = true
 [pip]
 python = "3.14"
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-extra-index-url = ["https://mirrors.aliyun.com/pypi/simple", "https://pypi.org/simple", "https://download.pytorch.org/whl/cpu"]
+extra-index-url = [
+  "https://mirrors.aliyun.com/pypi/simple",
+  "https://pypi.org/simple",
+  "https://download.pytorch.org/whl/cpu",
+]

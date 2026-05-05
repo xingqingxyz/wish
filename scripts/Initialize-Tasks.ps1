@@ -1,5 +1,8 @@
 #Requires -RunAsAdministrator
 
+if ($IsLinux) {
+  New-Item -ItemType Directory ~/.config/systemd/user -Force
+}
 Get-ChildItem -LiteralPath $PSScriptRoot/tasks -Force -ea Stop | ForEach-Object {
   if ($_.Attributes.HasFlag([System.IO.FileAttributes]::Directory)) {
     $dir = $_

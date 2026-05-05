@@ -11,6 +11,9 @@ param (
   $PreCommit,
   [Parameter()]
   [switch]
+  $PostMerge,
+  [Parameter()]
+  [switch]
   $PostUpdate
 )
 
@@ -21,14 +24,14 @@ trap { Pop-Location }
 
 if ($Build) {
   "pwsh -nop $($MyInvocation.MyCommand.Name) -PreCommit" > ./.git/hooks/pre-commit
-  "pwsh -nop $($MyInvocation.MyCommand.Name) -PostUpdate" > ./.git/hooks/post-update
+  "pwsh -nop $($MyInvocation.MyCommand.Name) -PostMerge" > ./.git/hooks/post-update
   "pwsh -nop $($MyInvocation.MyCommand.Name) -PostUpdate" > ./.git/hooks/post-merge
   if (!$IsWindows) {
     chmod +x ./.git/hooks/pre-commit ./.git/hooks/post-update ./.git/hooks/post-merge
   }
   git submodule update --init --recursive --remote
   dotnet build -c Release
-  pnpm up --latest
+  pnpm up -r --latest
   uv sync --upgrade
 }
 elseif ($Format) {
@@ -40,26 +43,41 @@ elseif ($Format) {
   & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath (rg $ags --files -tsh) -Inplace
   & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath (rg $ags --files -tpy -tjupyter) -Inplace
 }
-elseif ($PreCommit) {
-  $PSStyle.OutputRendering = 'PlainText'
-  Write-Host "$PSCommandPath -PreCommit"
+$PSStyle.OutputRendering = 'PlainText'
+Write-Host "$PSCommandPath -$($PSBoundParameters.Keys)"
+$dotBase = '_/' + $(switch ($true) {
+    $IsMacOS { 'macos'; break }
+    $IsWindows { 'windows'; break }
+    default { 'linux'; break }
+  })
+if ($PreCommit) {
   git diff --cached --name-only --diff-filter=ACMRT | ForEach-Object {
     & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath $_ -Inplace
   }
+  $email = git config --get user.email
+  fd -HI -tf -tl -egpg --base-directory=$dotBase | ForEach-Object {
+    gpg -eo $dotBase/$_ -r $email --yes ([System.IO.Path]::Join($HOME, $_.Substring(0, $_.Length - 4)))
+  }
   git add .
 }
-elseif ($PostUpdate) {
-  $PSStyle.OutputRendering = 'PlainText'
-  Write-Host "$PSCommandPath -PostUpdate"
+else {
   switch -CaseSensitive -Regex (git diff --name-only HEAD..HEAD^) {
     '^scripts/(Export-EnvrionmentVariables|Initialize-Dotfiles|Initialize-Tasks)\.ps1$' {
       Write-Host ". $_"
       . $_
       continue
     }
+    "^$dotBase/.+\.gpg$" {
+      gpg -do ([System.IO.Path]::Join($HOME, $_.Substring(0, $dotBase.Length).Substring(0, $_.Length - 4))) --yes $_
+      continue
+    }
   }
-}
-else {
-  throw [System.NotImplementedException]::new()
+  if ($PostMerge) {
+  }
+  elseif ($PostUpdate) {
+  }
+  else {
+    throw [System.NotImplementedException]::new()
+  }
 }
 Pop-Location

@@ -285,10 +285,10 @@ function Set-EnvironmentVariable {
     throw [System.NotImplementedException]::new()
   }
   elseif ($IsLinux) {
-    $envFilePath = $Scope -ceq 'Machine' ? '/etc/.env' : "$HOME/.env"
+    $envFilePath = $Scope -ceq 'Machine' ? '/etc/environment' : "$HOME/.env"
     $savedEnvironment = $envMap
     $envMap = @{}
-    Get-Region "${Scope}Env" $envFilePath | ForEach-Object {
+    Get-Content -LiteralPath $envFilePath | ForEach-Object {
       $key, $value = $_.Split('=', 2)
       $envMap[$key] = $value
     }
@@ -301,7 +301,7 @@ function Set-EnvironmentVariable {
       }
     }
     $lines = $envMap.GetEnumerator().ForEach{ $_.Key + '=' + $_.Value }
-    Set-Region "${Scope}Env" $lines $envFilePath -Force
+    $lines > $envFilePath
   }
   else {
     throw [System.NotImplementedException]::new()

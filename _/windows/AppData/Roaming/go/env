@@ -1,1 +1,1 @@
-GOPROXY=https://goproxy.cn,direct
+../../../../linux/.config/go/env

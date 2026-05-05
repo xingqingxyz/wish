@@ -23,7 +23,6 @@ if ($PSCulture -cne 'en-US') {
 }
 # data dirs for GithubRelease
 [string[]]$dirs = @(
-  "$HOME/.config/systemd/user"
   "$HOME/.local/bin"
   "$HOME/.local/share/applications"
   "$HOME/.local/share/bash-completion/completions"
@@ -35,15 +34,6 @@ if ($PSCulture -cne 'en-US') {
 New-Item -ItemType Directory $dirs -Force
 # history
 New-Item -ItemType SymbolicLink -Force -Target ConsoleHost_history.txt "$HOME/.local/share/powershell/PSReadLine/Visual Studio Code Host_history.txt"
-#region gpg
-# gnu
-Invoke-RestMethod 'https://mirrors.ustc.edu.cn/gnu/gnu-keyring.gpg' -OutFile /tmp/gnu-keyring.gpg
-gpg --import /tmp/gnu-keyring.gpg
-#endregion
-# flatpak
-if (Get-Command flatpak -CommandType Application -TotalCount 1 -ea Ignore) {
-  flatpak remote-modify flathub --url=https://mirror.sjtu.edu.cn/flathub
-}
 # autostart
 New-Item -ItemType Directory ~/.config/autostart -Force
 [string[]]$desktop = switch ((Get-Command fcitx5, handy, wechat, alacritty, ghostty, kitty -CommandType Application -TotalCount 1 -ea Ignore).Name) {

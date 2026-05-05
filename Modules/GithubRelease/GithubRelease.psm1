@@ -85,7 +85,7 @@ function Update-Software {
         sudo apt install -y $pkgs
       }
       if ($pkgs.Contains('clang-22')) {
-        Split-Path -Resolve -Leaf /bin/*-22 | ForEach-Object { sudo ln -s $_ /bin/$($_.Substring(0, $_.Length-3)) }
+        Split-Path -Resolve -Leaf /bin/*-22 | ForEach-Object { sudo ln -sf $_ /bin/$($_.Substring(0, $_.Length - 3)) }
       }
       continue
     }
@@ -228,14 +228,14 @@ function Update-Software {
     pnpm {
       if ($Global) {
         Start-Process pnpm self-update -WorkingDirectory $HOME -NoNewWindow -Wait
-        pnpm up -g
+        pnpm up -g --latest
         if ($Force -and $pkgs) {
           pnpm add -g $pkgs
         }
         continue
       }
       pnpm self-update
-      pnpm up
+      pnpm up -r
       continue
     }
     ps1 {
@@ -803,23 +803,15 @@ function Install-Release {
       break
     }
     edit {
-      switch ($true) {
-        $IsWindows {
-          $base = 'edit-{0}-{1}-windows' -f $Meta.version, $rust.arch
-          Invoke-ReleaseDownload $Meta $base.zip
-          Expand-Archive -LiteralPath $buildDir/$base.zip $buildDir -Force
-          break
-        }
-        $IsLinux {
-          break # FIXME: after edit-1.2.1
-          $base = 'edit-{0}-{1}-linux-gnu' -f $Meta.version, $rust.arch
-          Invoke-ReleaseDownload $Meta $base`.tar.zst
-          tar -xf $buildDir/$base.tar.zst --zstd -C $buildDir
-          break
-        }
+      $os = switch ($true) {
+        $IsWindows { 'windows'; break }
+        $IsLinux { 'linux-gnu'; break }
+        $IsMacOS { 'apple-darwin'; break }
         default { throw [System.NotImplementedException]::new() }
       }
-      Move-Item -LiteralPath $buildDir/edit$exe $binDir -Force
+      $file = 'edit-{0}-{1}-{2}{3}' -f $Meta.version, $rust.arch, $os, $ext
+      Invoke-ReleaseDownload $Meta $file
+      tar -xf $buildDir/$file -C $binDir
       break
     }
     flutter {

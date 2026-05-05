@@ -74,7 +74,7 @@ if ($IsWindows) {
       }
       $ok = Read-Host "Install $id`? (Y/N)"
       if ($ok -eq 'y') {
-        sudo winget install -s winget --accept-package-agreements --no-vt --id $id
+        sudo winget install -s winget --accept-package-agreements --no-vt --id $id | Out-Host
         if ($?) {
           $e.CommandScriptBlock = [scriptblock]::Create("Update-SessionEnvironment; if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")
           return
@@ -110,7 +110,7 @@ elseif ($IsLinux) {
         }
         $ok = Read-Host "Install $name`? (Y/N)"
         if ($ok -eq 'y') {
-          sudo %cmd% install -y $name 2>$null
+          sudo %cmd% install -y $name
           if ($?) {
             $e.CommandScriptBlock = [scriptblock]::Create("if (`$MyInvocation.ExpectingInput) { `$input | & $($e.CommandName) `$args } else { & $($e.CommandName) `$args }")
             return

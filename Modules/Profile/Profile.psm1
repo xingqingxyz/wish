@@ -132,7 +132,7 @@ function Show-CommandInfo {
     $Name,
     [Parameter(Position = 1, ValueFromRemainingArguments)]
     [string[]]
-    $ArgumentList,
+    $ArgumentList = @(),
     [Parameter(ValueFromPipelineByPropertyName)]
     [Alias('Path')]
     [string]

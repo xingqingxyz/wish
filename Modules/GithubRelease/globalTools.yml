@@ -6,6 +6,7 @@ apt:
   - clang-22
   - clangd-22
   - cmake
+  - code
   - cosign
   - curl
   - dconf-editor
@@ -15,6 +16,8 @@ apt:
   - fcitx5-chinese-addons
   - fonts-jetbrains-mono
   - gcc
+  - gh
+  - git
   - git-delta
   - gnome-browser-connector
   - graphviz
@@ -92,17 +95,19 @@ dnf:
   - chromedriver
   - clang
   - clang-tools-extra
-  - cosign
   - cmake
+  - code
   - dconf-editor
   - dictd
   - docker-cli
+  - dotnet-sdk-10.0
   - fcitx5-chinese-addons
   - fd-find
   - ffmpeg-free
   - gcc
   - gdb
   - gh
+  - git
   - git-delta
   - git-subtree
   - gnome-browser-connector
@@ -110,6 +115,7 @@ dnf:
   - hyperfine
   - ImageMagick
   - jetbrains-mono-fonts
+  - libicu-devel
   - lldb
   - microsoft-edge-stable
   - minisign
@@ -126,6 +132,7 @@ dnf:
   - valgrind
   - vlc
   - wl-clipboard
+  - xclip
 dnf-wsl:
   - aria2
   - bat
@@ -155,17 +162,15 @@ dnf-wsl:
 fedora:
   - bun
   - cargo-generate
-  - code
   - deno
   - diskus
-  - dotnet
   - flutter
   - fzf
+  - gh
   - go
   - golangci-lint
   - hexyl
   - jd
-  - jq
   - mkcert
   - mdbook
   - node
@@ -180,6 +185,7 @@ fedora:
   - ty
   - uv
   - wasm-pack
+  - xan
   - yq
 flatpak: []
 flutter: []
@@ -292,6 +298,7 @@ ubuntu:
   - ty
   - uv
   - wasm-pack
+  - xan
   - yq
 uv:
   - git-filter-repo

@@ -24,6 +24,13 @@ Out-File -InputObject (Get-Content $dir/* | Select-Object -Unique) -LiteralPath 
 New-Item -ItemType SymbolicLink -Force -Target ConsoleHost_history.txt "$dir/Visual Studio Code Host_history.txt"
 # update help
 Update-Help -UICulture en-US -ea Ignore
+#region gpg
+# gnu
+Invoke-RestMethod 'https://mirrors.ustc.edu.cn/gnu/gnu-keyring.gpg' -OutFile Temp:/gnu-keyring.gpg
+gpg --import (Convert-Path Temp:/gnu-keyring.gpg)
+# xingqingxyz
+gpg --import $PSScriptRoot/data/pubkey.gpg
+#endregion
 # system pkgs
 Set-PSRepository PSGallery -InstallationPolicy Trusted
 Install-Module PSToml, Yayaml
