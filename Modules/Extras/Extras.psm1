@@ -288,9 +288,6 @@ function Get-Region {
     $InputObject
   )
   [string[]]$lines = $MyInvocation.ExpectingInput ? $input : (Get-Content -LiteralPath $LiteralPath -ea Ignore)
-  if ($LiteralPath) {
-    $lines = (Get-Content -LiteralPath $LiteralPath -ea Ignore) ?? ''
-  }
   $found = 0
   $lines = foreach ($line in $lines) {
     if (!$found -and $line.Trim() -ceq "$LineComment#region $Name") {

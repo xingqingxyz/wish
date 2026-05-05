@@ -19,69 +19,69 @@ param (
   $LiteralPath
 )
 
-if ($Path) {
-  $LiteralPath = Convert-Path $Path
-}
-$root = [System.IO.Path]::GetFullPath($PSScriptRoot + '/../_/' + $(switch ($true) {
+$root = [System.IO.Path]::GetDirectoryName($PSScriptRoot)
+$dotRoot = [System.IO.Path]::Join($root, '_/' + $(switch ($true) {
       $IsMacOS { 'macos'; break }
       $IsWindows { 'windows'; break }
       default { 'linux'; break }
     }))
+if ($Gpg) {
+  [string[]]$gpgLines = Get-Region gpg $root/.gitattributes
+}
+if ($Path) {
+  $LiteralPath = Convert-Path $Path
+}
 
 if ($Install) {
-  if ($Gpg) {
-    $email = git config --get user.email
-  }
-  return $LiteralPath.ForEach{
-    $target = $_.Replace($HOME, $root)
+  $LiteralPath.ForEach{
+    $target = $_.Replace($HOME, $dotRoot)
     if ($target.Length -eq $_.Length) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
     }
-    if ($Gpg) {
-      $target += '.gpg'
-      New-Item $target -Force
-      gpg -eo $target -r $email --batch --no-tty --yes $_
-      return
-    }
-    # remove existing file or link
+    $content = Get-Content -LiteralPath $_ -Raw -Force
     Remove-Item -LiteralPath $target -ea Ignore
-    # copy the content directly
-    Copy-Item -LiteralPath $_ (New-Item $target -Force) -Force
+    New-Item $target -Value $content -Force
     New-Item -ItemType SymbolicLink -Force -Target $target $_
+    if ($Gpg) {
+      $gpgLines += $target.Substring($root.Length).Replace('\', '/') + ' diff=gpg filter=gpg'
+    }
+  }
+  if ($Gpg) {
+    $gpgLines = $gpgLines | Sort-Object -Unique
+    Set-Region gpg $gpgLines $root/.gitattributes
   }
 }
 elseif ($Uninstall) {
-  return $LiteralPath.ForEach{
-    $target = $_.Replace($HOME, $root)
+  $pathSet = [System.Collections.Generic.HashSet[string]]::new($LiteralPath.Length)
+  $LiteralPath.ForEach{
+    $target = $_.Replace($HOME, $dotRoot)
     if ($target.Length -eq $_.Length) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
-    }
-    if ($Gpg) {
-      $target += '.gpg'
-      Remove-Item -LiteralPath $target -Force -ea Ignore
-      return
     }
     $content = Get-Content -LiteralPath $target -Raw -Force -ea Ignore
     Remove-Item -LiteralPath $_, $target -Force -ea Ignore
     $content > $_
+    if ($Gpg) {
+      $null = $pathSet.Add($target.Substring($root.Length).Replace('\', '/') + ' diff=gpg filter=gpg')
+    }
+  }
+  if ($Gpg) {
+    $gpgLines = $gpgLines.Where{ !$pathSet.Contains($_) }
+    Set-Region gpg $gpgLines $root/.gitattributes
   }
 }
-
-fd -HIa -tf -tl --base-directory=$root | ForEach-Object {
-  $file = $_.Replace($root, $HOME)
-  $target = (Get-Item -LiteralPath $_ -Force).ResolvedTarget
-  if ($file.EndsWith('.gpg')) {
-    $file = $file.Substring(0, $file.Length - 4)
-    gpg -do $file --batch --no-tty --yes $target
-    return
+else {
+  fd -HIa -tf -tl --base-directory=$dotRoot | ForEach-Object {
+    $file = $_.Replace($dotRoot, $HOME)
+    $target = (Get-Item -LiteralPath $_ -Force).ResolvedTarget
+    if ($null -eq $target) {
+      throw "Failed to resolve target for $_"
+    }
+    if ((Get-Item -LiteralPath $file -Force -ea Ignore).Target -cne $target) {
+      New-Item -ItemType SymbolicLink -Force -Target $target $file
+    }
   }
-  if ($null -eq $target) {
-    throw "Failed to resolve target for $_"
+  if ($IsWindows) {
+    Repair-GitSymlinks
   }
-  if ((Get-Item -LiteralPath $file -Force -ea Ignore).Target -cne $target) {
-    New-Item -ItemType SymbolicLink -Force -Target $target $file
-  }
-}
-if ($IsWindows) {
-  Repair-GitSymlinks
 }

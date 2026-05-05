@@ -20,9 +20,7 @@
       "options": {
         "cwd": "${fileDirname}"
       },
-      "problemMatcher": [
-        "$msCompile"
-      ],
+      "problemMatcher": ["$msCompile"],
       "type": "cppbuild"
     },
     {
@@ -39,9 +37,7 @@
       "options": {
         "cwd": "${fileDirname}"
       },
-      "problemMatcher": [
-        "$gcc"
-      ],
+      "problemMatcher": ["$gcc"],
       "group": {
         "kind": "build",
         "isDefault": true

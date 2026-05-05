@@ -1,5 +1,4 @@
 * text=auto eol=lf
-/_/**/*.gpg diff=gpg
 /_/.codebuddy/settings.json linguist-generated=true
 /_/.config/DankMaterialShell/settings.json linguist-generated=true
 /_/.config/fcitx5/** linguist-generated=true
@@ -8,3 +7,6 @@
 /scripts/data/custom-keybindings.ini linguist-generated=true
 /scripts/data/gnome-shell.ini linguist-generated=true
 /scripts/data/schema.docs.graphql linguist-vendored=true
+#region gpg
+/_/linux/.local/share/fcitx5/data/QuickPhrase.mb diff=gpg filter=gpg
+#endregion

@@ -20,6 +20,9 @@ param (
   [Parameter(ParameterSetName = 'LiteralPath')]
   [switch]
   $Inplace,
+  [Parameter()]
+  [switch]
+  $Force,
   [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'Stdin')]
   [System.Object]
   $InputObject
@@ -64,14 +67,15 @@ function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) 
       break
     }
     '^\.(?:js|cjs|mjs|jsx|tsx|ts|cts|mts|json|jsonc|json5|yml|yaml|htm|html|xhtml|shtml|vue|gql|graphql|css|scss|sass|less|hbs|handlebars|md|markdown|toml)$' {
+      $ags = $Force ? '--ignore-path=', '--with-node-modules' : @()
       if ($Inplace) {
-        { oxfmt --write --ignore-path= --with-node-modules `-- $args }
+        { oxfmt --write $ags `-- $args }
       }
       elseif ($Stdin) {
-        { $input | oxfmt --ignore-path= --with-node-modules --stdin-filepath=$args }
+        { $input | oxfmt $ags --stdin-filepath=$args }
       }
       else {
-        { oxfmt --ignore-path= --with-node-modules `-- $args }
+        { oxfmt $ags `-- $args }
       }
       break
     }

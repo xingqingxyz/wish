@@ -890,14 +890,14 @@ Register-ArgumentCompleter -Native -CommandName git -ScriptBlock {
       }
       'check-attr' {
         if ($wordToComplete.StartsWith('-')) {
-          '-a,', '--cached', '--stdin', '-z', '--source='
+          '-a', '--cached', '--stdin', '-z', '--source='
           break
         }
         break
       }
       'check-ignore' {
         if ($wordToComplete.StartsWith('-')) {
-          '-q,', '-v,', '--stdin', '-z', '-n,', '--no-index'
+          '-q', '-v', '--stdin', '-z', '-n', '--no-index'
           break
         }
         break
