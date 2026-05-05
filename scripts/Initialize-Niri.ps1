@@ -9,6 +9,8 @@ if (!(Get-Command niri -CommandType Application -TotalCount 1 -ea Ignore)) {
     sudo add-apt-repository -y ppa:avengemedia/danklinux
     sudo add-apt-repository -y ppa:avengemedia/dms
     sudo apt install -y niri dms
+    sudo systemctl disable --user --global dms
+    systemctl --user add-wants niri.service dms
   }
   else {
     throw [System.NotImplementedException]::new()

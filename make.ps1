@@ -56,7 +56,7 @@ if ($PreCommit) {
   }
   $email = git config --get user.email
   fd -HI -tf -tl -egpg --base-directory=$dotBase | ForEach-Object {
-    gpg -eo $dotBase/$_ -r $email --yes ([System.IO.Path]::Join($HOME, $_.Substring(0, $_.Length - 4)))
+    gpg -eo $dotBase/$_ -r $email --batch --no-tty --yes ([System.IO.Path]::Join($HOME, $_.Substring(0, $_.Length - 4)))
   }
   git add .
 }
@@ -68,7 +68,7 @@ else {
       continue
     }
     "^$dotBase/.+\.gpg$" {
-      gpg -do ([System.IO.Path]::Join($HOME, $_.Substring(0, $dotBase.Length).Substring(0, $_.Length - 4))) --yes $_
+      gpg -do ([System.IO.Path]::Join($HOME, $_.Substring(0, $dotBase.Length).Substring(0, $_.Length - 4))) --batch --no-tty --yes $_
       continue
     }
   }

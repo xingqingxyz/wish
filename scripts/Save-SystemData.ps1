@@ -8,7 +8,6 @@ if ($IsLinux) {
 .local/numbat
 .local/share/applications
 .local/share/bash-completion/completions
-.local/share/com.pais.handy
 .local/share/fonts
 .local/share/gnome-shell/extensions
 .local/share/icons
@@ -31,7 +30,7 @@ Public
 Templates
 Videos
 '@.Split("`n")
-  tar -C $HOME --zstd -cf home.tar.zst $dirs
+  tar -C $HOME --zstd -cf ~/home.tar.zst $dirs
   $dirs = @'
 /opt/microsoft/powershell/7
 /usr/local/bin/go

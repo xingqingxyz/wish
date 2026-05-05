@@ -38,6 +38,7 @@ gsettings set org.gnome.desktop.wm.keybindings toggle-maximized []
 gsettings set org.gnome.desktop.wm.preferences button-layout ':close'
 # keyboard
 gsettings set org.gnome.desktop.peripherals.keyboard numlock-state true
+gsettings set org.gnome.desktop.peripherals.keyboard remember-numlock-state false
 gsettings set org.gnome.desktop.peripherals.touchpad send-events 'disabled'
 # terminal
 gsettings set org.gnome.desktop.default-applications.terminal exec alacritty

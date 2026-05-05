@@ -33,3 +33,8 @@
 	navigate = true
 [merge]
 	conflictStyle = zdiff3
+[diff "gpg"]
+	textconv = gpg -dq --batch --no-tty
+[filter "gpg"]
+	smudge = gpg -dq --batch --no-tty
+	clean = gpg -eq --batch --no-tty -r cm.email@qq.com

@@ -40,7 +40,7 @@ if ($Install) {
     if ($Gpg) {
       $target += '.gpg'
       New-Item $target -Force
-      gpg -eo $target -r $email --yes $_
+      gpg -eo $target -r $email --batch --no-tty --yes $_
       return
     }
     # remove existing file or link
@@ -72,7 +72,7 @@ fd -HIa -tf -tl --base-directory=$root | ForEach-Object {
   $target = (Get-Item -LiteralPath $_ -Force).ResolvedTarget
   if ($file.EndsWith('.gpg')) {
     $file = $file.Substring(0, $file.Length - 4)
-    gpg -do $file --yes $target
+    gpg -do $file --batch --no-tty --yes $target
     return
   }
   if ($null -eq $target) {
