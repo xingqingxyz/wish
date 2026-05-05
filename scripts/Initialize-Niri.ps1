@@ -11,6 +11,8 @@ if ($PSVersionTable.OS.StartsWith('Ubuntu ')) {
     sudo add-apt-repository -y ppa:avengemedia/danklinux
     sudo add-apt-repository -y ppa:avengemedia/dms
     sudo apt install -y niri dms
+    sudo systemctl disable --user --global dms
+    systemctl --user add-wants niri.service dms
   }
 }
 else {

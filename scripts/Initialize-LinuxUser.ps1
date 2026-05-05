@@ -46,9 +46,8 @@ if (Get-Command flatpak -CommandType Application -TotalCount 1 -ea Ignore) {
 }
 # autostart
 New-Item -ItemType Directory ~/.config/autostart -Force
-[string[]]$desktop = switch ((Get-Command fcitx5, handy, wechat, alacritty, ghostty, kitty -CommandType Application -TotalCount 1 -ea Ignore).Name) {
+[string[]]$desktop = switch ((Get-Command fcitx5, wechat, alacritty, ghostty, kitty -CommandType Application -TotalCount 1 -ea Ignore).Name) {
   'fcitx5' { 'org.fcitx.Fcitx5.desktop'; continue }
-  'handy' { 'Handy.desktop'; continue }
   'wechat' { 'wechat.desktop'; continue }
   'alacritty' { 'Alacritty.desktop'; break }
   'ghostty' { 'com.mitchellh.ghostty.desktop'; break }
