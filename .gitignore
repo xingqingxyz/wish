@@ -1,6 +1,7 @@
 __pycache__
 logs
 node_modules
+target
 /Modules/*/bin
 /Modules/*/obj
 

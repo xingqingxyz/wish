@@ -5,7 +5,7 @@
     "windows_terminal": "CGA"
   },
   "light": {
-    "alacritty": "github_light_default",
+    "alacritty": "alabaster",
     "bat": "GitHub",
     "windows_terminal": "VSCode Light Modern"
   }

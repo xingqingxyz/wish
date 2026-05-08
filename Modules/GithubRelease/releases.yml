@@ -156,8 +156,8 @@
   version: 3.4.0
 - name: node
   repo: nodejs/node
-  tag: v25.9.0
-  version: 25.9.0
+  tag: v26.0.0
+  version: 26.0.0
 - name: numbat
   repo: sharkdp/numbat
   tag: v1.23.0

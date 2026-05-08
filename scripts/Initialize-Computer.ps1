@@ -29,7 +29,7 @@ Update-Help -UICulture en-US -ea Ignore
 Invoke-RestMethod 'https://mirrors.ustc.edu.cn/gnu/gnu-keyring.gpg' -OutFile Temp:/gnu-keyring.gpg
 gpg --import (Convert-Path Temp:/gnu-keyring.gpg)
 # xingqingxyz
-gpg --import $PSScriptRoot/data/pubkey.gpg
+gpg --import $PSScriptRoot/data/pubkey.asc
 #endregion
 # system pkgs
 Set-PSRepository PSGallery -InstallationPolicy Trusted
