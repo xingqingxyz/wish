@@ -422,8 +422,8 @@ function Use-DevelopmentEnvironment {
       if (!$IsWindows) {
         throw [System.NotImplementedException]::new()
       }
-      Import-Module 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
-      Enter-VsDevShell 1da1aa76 -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+      Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+      Enter-VsDevShell 4c1b6954 -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
       break
     }
   }

@@ -35,7 +35,7 @@ Register-ArgumentCompleter -Native -CommandName cargo -ScriptBlock {
   @(switch ($command) {
       '' {
         if ($wordToComplete.StartsWith('-')) {
-          '-V', '--version', '--list', '--explain', '-v', '--verbose', '-q', '--quiet', '--color', '--locked', '--offline', '--frozen', '--config', '-h', '--help' | ForEach-Object { [CompletionResult]::new($_) }
+          ('-V', '--version', '--list', '--explain', '-v', '--verbose', '-q', '--quiet', '--color', '--locked', '--offline', '--frozen', '--config', '-h', '--help').ForEach{ [CompletionResult]::new($_) }
           break
         }
         [CompletionResult]::new('add', 'add', [CompletionResultType]::ParameterValue, 'Add dependencies to a Cargo.toml manifest file')
@@ -84,10 +84,8 @@ Register-ArgumentCompleter -Native -CommandName cargo -ScriptBlock {
         [CompletionResult]::new('verify-project', 'verify-project', [CompletionResultType]::ParameterValue, 'Check correctness of crate manifest')
         [CompletionResult]::new('version', 'version', [CompletionResultType]::ParameterValue, 'Show version information')
         [CompletionResult]::new('yank', 'yank', [CompletionResultType]::ParameterValue, 'Remove a pushed crate from the index')
-        cargo install --list | ForEach-Object {
-          if ($_.StartsWith('    cargo-')) {
-            [CompletionResult]::new([System.IO.Path]::GetFileNameWithoutExtension($_.Substring(10)))
-          }
+        [CompletionCompleters]::CompleteCommand('cargo-').GetEnumerator().ForEach{
+          [CompletionResult]::new([System.IO.Path]::GetFileNameWithoutExtension($_.CompletionText.Substring(6)))
         }
         break
       }

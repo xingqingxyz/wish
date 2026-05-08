@@ -5,7 +5,7 @@
 - name: balenaEtcher
   repo: balena-io/etcher
 - name: bash
-  version: '5.3'
+  version: "5.3"
 - name: bat
   repo: sharkdp/bat
   tag: v0.26.0
@@ -34,8 +34,8 @@
   repo: sigstore/cosign
 - name: crush
   repo: charmbracelet/crush
-  tag: v0.55.0
-  version: 0.55.0
+  tag: v0.66.0
+  version: 0.66.0
 - name: deno
   repo: denoland/deno
   tag: v2.7.4
@@ -58,9 +58,9 @@
 - name: fd
   repo: sharkdp/fd
 - name: flutter
-  version: 3.41.7
-  file: https://storage.flutter-io.cn/flutter_infra_release/releases/stable/linux/flutter_linux_3.41.7-stable.tar.xz
-  sha256: f344d5057db52abc2a63cd3a7c7370957b7685d1fca5e5fbe2ce4dfe74657a79
+  version: 3.41.9
+  file: https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.41.9-stable.zip
+  sha256: 03c3235aa9e4b6fffdbac2176f803731cf5a5c998a3a5e57f840b4b202afa4f6
 - name: fzf
   repo: junegunn/fzf
   tag: v0.71.0
@@ -85,8 +85,8 @@
   file: go1.26.2.linux-amd64.tar.gz
 - name: golangci-lint
   repo: golangci/golangci-lint
-  tag: v2.11.4
-  version: 2.11.4
+  tag: v2.12.1
+  version: 2.12.1
 - name: goreleaser
   repo: goreleaser/goreleaser
   tag: v2.12.5
@@ -123,7 +123,7 @@
 - name: less
   repo: jftuga/less-Windows
   tag: less-v692
-  version: '692.0'
+  version: "692.0"
 - name: localsend
   repo: localsend/localsend
   tag: v1.17.0
@@ -149,9 +149,9 @@
 - name: nerd-fonts
   repo: ryanoasis/nerd-fonts
   fonts:
-    - FiraCode
-    - MapleMono
-    - CascadiaCode
+  - FiraCode
+  - MapleMono
+  - CascadiaCode
   tag: v3.4.0
   version: 3.4.0
 - name: node
@@ -204,7 +204,7 @@
 - name: tmux
   repo: tmux/tmux-builds
   tag: v3.6a
-  version: '3.6'
+  version: "3.6"
 - name: tree-sitter
   repo: tree-sitter/tree-sitter
   tag: v0.26.6

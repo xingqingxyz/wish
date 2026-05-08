@@ -5,9 +5,6 @@ param (
   $Build,
   [Parameter()]
   [switch]
-  $Format,
-  [Parameter()]
-  [switch]
   $PreCommit,
   [Parameter()]
   [switch]
@@ -30,18 +27,17 @@ if ($Build) {
     chmod +x ./.git/hooks/pre-commit ./.git/hooks/post-update ./.git/hooks/post-merge
   }
   git submodule update --init --recursive --remote
+  cargo build --release
   dotnet build -c Release
+  go get -u ./...
+  pnpm self-update
   pnpm up -r --latest
   uv sync --upgrade
-}
-elseif ($Format) {
-  $ags = git config --file ./.gitmodules --get-regexp submodule.*.path | ForEach-Object {
-    '-g!/' + $_.Split(' ', 2)[1]
-  }
-  & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath (rg $ags --files '--glob=*.{ps1,psd1,psm1}') -Inplace
-  & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath (rg $ags --files -tsh) -Inplace
-  & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath (rg $ags --files -tpy -tjupyter) -Inplace
-  oxfmt
+  $binDir = $IsWindows ? "$env:LOCALAPPDATA\prefix\bin" : "$HOME/.local/bin"
+  $exe = go env GOEXE
+  Split-Path -Resolve -Leaf cmd/* | ForEach-Object -Parallel {
+    go build -trimpath -ldflags '-w -s' -o $Using:binDir/$($_.Name)$exe ./cmd/$_
+  } -ThrottleLimit ($env:NUMBER_OF_PROCESSORS ?? 8)
 }
 $PSStyle.OutputRendering = 'PlainText'
 Write-Host "$PSCommandPath -$($PSBoundParameters.Keys)"

@@ -445,7 +445,7 @@ function x {
     }
     'ghostty' { 'ghostty', '+new-window', '--title', $cmd, '-e'; break }
     'kitty' { $IsMacOS ? 'open', '-n', '-a', 'kitty.app', '--', '--title', $cmd, '--' : 'kitty', '--detach', '--title', $cmd; '--'; break }
-    'wt' { 'wt.exe', 'nt', '-d', $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath, '--title', $cmd, '--'; break }
+    'wt' { 'wt.exe', '-w', '0', 'nt', '-d', $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath, '--title', $cmd, '--'; break }
     'cmd' { 'cmd', '/d', '/c', 'start', ('"' + $cmd.Replace('"', '""') + '"'); break }
     # no default
   }
@@ -719,24 +719,24 @@ filter showFile ([string[]]$ArgumentList) {
       break
     }
     '\.(?:tar|tgz|tbz2)$' {
-      tar -tvf $_ | less
+      tar -tvvf $_ | less
       break
     }
     '\.tar\.(?:bz2|[glx]z|[zZ]|lzma|br)$' {
-      tar -tvf $_ | less
+      tar -tvvf $_ | less
       break
     }
     '\.tar\.zst$' {
-      tar --zstd -tvf $_ | less
+      tar --zstd -tvvf $_ | less
       break
     }
     '\.tar\.lz$' {
-      tar --lzip -tvf $_ | less
+      tar --lzip -tvvf $_ | less
       break
     }
     '\.(?:zip|jar|nbm)$' {
       if ($IsWindows) {
-        tar -tvf $_ | less
+        tar -tvvf $_ | less
       }
       else {
         zipinfo $_ | less
