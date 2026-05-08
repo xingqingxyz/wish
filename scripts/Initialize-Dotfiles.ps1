@@ -20,7 +20,7 @@ param (
 )
 
 $root = [System.IO.Path]::GetDirectoryName($PSScriptRoot)
-$dotRoot = [System.IO.Path]::Join($root, '_/' + $(switch ($true) {
+$dotRoot = [System.IO.Path]::Join($root, '_', $(switch ($true) {
       $IsMacOS { 'macos'; break }
       $IsWindows { 'windows'; break }
       default { 'linux'; break }
@@ -39,7 +39,7 @@ if ($Install) {
       return Write-Warning "$_ is not a relative path to HOME, skip"
     }
     $content = Get-Content -LiteralPath $_ -Raw -Force
-    Remove-Item -LiteralPath $target -ea Ignore
+    Remove-Item -LiteralPath $target -Force -ea Ignore
     New-Item $target -Value $content -Force
     New-Item -ItemType SymbolicLink -Force -Target $target $_
     if ($Gpg) {
@@ -82,6 +82,6 @@ else {
     }
   }
   if ($IsWindows) {
-    Repair-GitSymlinks
+    & $PSScriptRoot\Repair-GitSymlinks.ps1
   }
 }

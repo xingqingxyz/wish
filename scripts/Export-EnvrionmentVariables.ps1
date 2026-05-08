@@ -92,6 +92,13 @@ if ($IsWindows) {
     [System.Environment]::SetEnvironmentVariable($_.Key, $_.Value)
     Set-ItemProperty -LiteralPath HKCU:\Environment $_.Key $_.Value
   }
+  $Path = @'
+%USERPROFILE%\.cargo\bin
+%USERPROFILE%\go\bin
+%USERPROFILE%\.bun\bin
+%USERPROFILE%\.dotnet\tools
+'@.Split("`n") + (Get-Item -LiteralPath HKCU:\Environment).GetValue('Path', $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames).Split(';') | Select-Object -Unique | Join-String -Separator ';'
+  Set-ItemProperty -LiteralPath HKCU:\Environment Path $Path -Type ExpandString
   # only let windows events notify once
   [System.Environment]::SetEnvironmentVariable('WISH_ROOT', $WISH_ROOT, 'User')
 }
@@ -102,6 +109,7 @@ $HOME/.local/bin
 $HOME/.cargo/bin
 $HOME/go/bin
 $HOME/.bun/bin
+$HOME/.dotnet/tools
 $HOME/.local/share/powershell/Scripts
 /usr/local/share/powershell/Scripts
 /usr/local/bin

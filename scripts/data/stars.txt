@@ -58,8 +58,10 @@ jroimartin/gocui
 koalaman/shellcheck
 lokesh/color-thief
 lovell/sharp
+medialab/xan
 meilisearch/meilisearch
 microsoft/docfind
+microsoft/edit
 microsoft/markitdown
 microsoft/microsoft-ui-xaml
 microsoft/pyright

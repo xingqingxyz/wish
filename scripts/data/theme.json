@@ -2,11 +2,11 @@
   "dark": {
     "alacritty": "tokyo_night_enhanced",
     "bat": "Catppuccin Frappe",
-    "windows_terminal": "CGA"
+    "windows_terminal": "Dark+"
   },
   "light": {
     "alacritty": "alabaster",
     "bat": "GitHub",
-    "windows_terminal": "VSCode Light Modern"
+    "windows_terminal": "Tango Light"
   }
 }

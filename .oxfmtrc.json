@@ -3,9 +3,5 @@
   "singleQuote": true,
   "printWidth": 80,
   "sortPackageJson": true,
-  "ignorePatterns": [
-    "_/.config/DankMaterialShell/settings.json",
-    "alacritty-theme",
-    "scripts/data/schema.docs.graphql"
-  ]
+  "ignorePatterns": ["_", "alacritty-theme", "scripts/data"]
 }

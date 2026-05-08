@@ -24,9 +24,8 @@ alias cls=clear \
   rg='rg --hyperlink-format=vscode' \
   tree='fd -tf --hyperlink=auto' \
   cd..='cd ..' \
-  ..='cd ..' \
-  ...='cd ../..' \
-  ....='cd ../../..'
+  cd...='cd ../..' \
+  cd....='cd ../../..'
 
 if [[ $TERM_PROGRAM != vscode* ]]; then
   alias fd='fd --hyperlink=auto'
@@ -143,9 +142,8 @@ case "$OSTYPE" in
       PATH=/mingw64/bin:$PATH
     fi
     alias ls='ls --color=auto'
-    ;;
-  *)
-    REPLY=$(realpath -- "${BASH_SOURCE[0]}")
-    eval "$(printf '. %q\n' "${REPLY%/*}"/*.sh)"
+    shopt -s extglob
     ;;
 esac
+REPLY=$(realpath -- "${BASH_SOURCE[0]}")
+eval "$(printf '. %q\n' "${REPLY%/*}"/*.sh)"

@@ -713,7 +713,8 @@ function Install-Release {
     cargo-generate {
       $file = 'cargo-generate-{0}-{1}.tar.gz' -f $Meta.tag, $rust.target
       Invoke-ReleaseDownload $Meta $file
-      tar -xf $buildDir/$file -C $binDir
+      tar -xf $buildDir/$file -C $buildDir
+      Move-Item -LiteralPath $buildDir/cargo-generate$exe $binDir -Force
       break
     }
     code {

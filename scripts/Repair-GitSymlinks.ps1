@@ -4,10 +4,13 @@ param (
   [switch]
   $Force
 )
-
-git diff-index --quiet HEAD
-if (!$? -and !$Force) {
-  return Write-Warning 'has staged changes'
+try {
+  git diff-index --quiet HEAD
+}
+catch {
+  if (!$Force) {
+    return Write-Error 'has staged changes'
+  }
 }
 git ls-files -s | ForEach-Object {
   [int]$mode, $item = $_ -split '\s+', 4
