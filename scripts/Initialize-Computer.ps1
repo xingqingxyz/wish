@@ -36,4 +36,4 @@ Set-PSRepository PSGallery -InstallationPolicy Trusted
 Install-Module PSToml, Yayaml
 Update-System -Force
 # build
-. $PSScriptRoot/../make.ps1 -Build
+. $PSScriptRoot/../make.ps1 -Init

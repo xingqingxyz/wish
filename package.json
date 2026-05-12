@@ -23,6 +23,6 @@
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0"
+    "@types/node": "^25.6.2"
   }
 }

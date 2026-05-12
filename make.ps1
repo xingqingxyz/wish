@@ -2,7 +2,7 @@
 param (
   [Parameter()]
   [switch]
-  $Build,
+  $Init,
   [Parameter()]
   [switch]
   $PreCommit,
@@ -19,7 +19,7 @@ $PSNativeCommandUseErrorActionPreference = $true
 Push-Location -LiteralPath $PSScriptRoot
 trap { Pop-Location }
 
-if ($Build) {
+if ($Init) {
   "pwsh -nop $($MyInvocation.MyCommand.Name) -PreCommit" > ./.git/hooks/pre-commit
   "pwsh -nop $($MyInvocation.MyCommand.Name) -PostMerge" > ./.git/hooks/post-update
   "pwsh -nop $($MyInvocation.MyCommand.Name) -PostUpdate" > ./.git/hooks/post-merge
@@ -29,7 +29,7 @@ if ($Build) {
   git submodule update --init --recursive --remote
   cargo build --release
   dotnet build -c Release
-  go get -u ./...
+  go mod tidy
   pnpm self-update
   pnpm up -r --latest
   uv sync --upgrade
@@ -43,7 +43,7 @@ $PSStyle.OutputRendering = 'PlainText'
 Write-Host "$PSCommandPath -$($PSBoundParameters.Keys)"
 if ($PreCommit) {
   git diff --cached --name-only --diff-filter=ACMRT | Tee-Object -Variable files | ForEach-Object {
-    & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath $_ -Inplace
+    & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath $_ -Inplace -ea Ignore
   }
   git add $files
 }

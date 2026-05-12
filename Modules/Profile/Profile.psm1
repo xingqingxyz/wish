@@ -67,7 +67,7 @@ function Get-PowerShellExecArgs {
   }
   if ($ArgumentList[0] -is [scriptblock]) {
     $ArgumentList[0] = '$ErrorActionPreference = "Stop"; $PSNativeCommandUseErrorActionPreference = $true; ' + $ArgumentList[0]
-    $ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
+    [string[]]$ArgumentList = 'pwsh', '-nop', '-cwa' + $ArgumentList
     for ($i = 4; $i -lt $ArgumentList.Count; $i++) {
       if ($ArgumentList[$i].StartsWith('-')) {
         continue
@@ -76,6 +76,7 @@ function Get-PowerShellExecArgs {
     }
     return $ArgumentList
   }
+  $ArgumentList = [string[]]$ArgumentList
   $info = Get-Command $ArgumentList[0]
   if ($info.CommandType -ceq 'Alias') {
     $info = $info.ResolvedCommand
@@ -281,15 +282,15 @@ function uev {
 }
 
 function npm {
-  $cmd = switch ($true) {
-    # use npm as a cli, pipe output
-    ($MyInvocation.PipelineLength -ne 1) { 'npm'; break }
-    (Test-Path pnpm-lock.yaml) { 'pnpm'; break }
-    (Test-Path bun.lock?) { 'bun'; break }
-    (Test-Path yarn.lock) { 'yarn'; break }
-    (Test-Path deno.json) { 'deno'; break }
-    default { 'npm'; break }
-  }
+  $root = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
+  $cmd = $(do {
+      $items = Split-Path -Resolve -Leaf $root/pnpm-lock.yaml, $root/bun.lock?, $root/yarn.lock, $root/deno.json -ea Ignore
+      if ($items) {
+        $items[0].Split('-.'.ToCharArray(), 2)[0]
+        break
+      }
+      $root = [System.IO.Path]::GetDirectoryName($root)
+    } while (![System.IO.Path]::IsPathRooted($root))) ?? 'npm'
   $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
   $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
   if ($MyInvocation.ExpectingInput) {
@@ -306,15 +307,26 @@ function npm {
 }
 
 function npx {
+  $root = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
+  $npm = $(do {
+      $items = Split-Path -Resolve -Leaf $root/pnpm-lock.yaml, $root/bun.lock?, $root/yarn.lock, $root/deno.json -ea Ignore
+      if ($items) {
+        $items[0].Split('-.'.ToCharArray(), 2)[0]
+        break
+      }
+      $root = [System.IO.Path]::GetDirectoryName($root)
+    } while (![System.IO.Path]::IsPathRooted($root))) ?? 'npm'
   $cmd, $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
-  $cmd = (Get-Command ./node_modules/.bin/$cmd, $cmd -CommandType Application -TotalCount 1 -ea Ignore)?[0].Source
+  $cmd = (Get-Command ./node_modules/.bin/$cmd, $root/node_modules/.bin/$cmd, $cmd -CommandType Application -TotalCount 1 -ea Ignore)?[0].Source
   if (!$cmd) {
-    $cmd, $ags = @(switch ($true) {
-        (Test-Path -LiteralPath pnpm-lock.yaml) { 'pnpm', 'exec'; break }
-        (Test-Path -LiteralPath yarn.lock) { 'yarn', 'exec'; break }
-        (Test-Path bun.lock?) { 'bun', 'x'; break }
-        default { 'npm', 'exec', '--'; break }
-      }) + $ags
+    $cmd, $ags = @(switch ($npm) {
+        bun { 'bun', 'x'; break }
+        deno { 'npm', 'exec', '--'; break }
+        npm { 'npm', 'exec', '--'; break }
+        pnpm { 'pnpm', 'exec'; break }
+        yarn { 'yarn', 'exec'; break }
+        default { throw 'command not found' }
+      }) + $cmd + $ags
     $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
   }
   if ($MyInvocation.ExpectingInput) {

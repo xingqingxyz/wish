@@ -13,6 +13,21 @@ function e.i {
   )
   $psEditor.GetEditorContext().CurrentFile.InsertText($Value)
 }
+
+function e.jq {
+  [CmdletBinding()]
+  param (
+    [Parameter(Position = 0)]
+    [ValidateSet('jq', 'js', 'py')]
+    [string]
+    $Type = 'jq'
+  )
+  $context = $psEditor.GetEditorContext()
+  if ($context.CurrentFile.Language -cnotmatch '^jsonc?$') {
+    return Write-Error 'document language not jsonc like'
+  }
+  $context.CurrentFile.GetText() | node $PSScriptRoot/../../scripts/jsonPath.ts $Type ($context.CursorPosition.Line - 1) ($context.CursorPosition.Column - 1)
+}
 #endregion
 
 # commands

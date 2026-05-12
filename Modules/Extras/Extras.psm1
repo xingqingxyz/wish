@@ -124,9 +124,8 @@ function Register-PSScheduledTask {
     [string]
     $Command,
     [Parameter()]
-    [ValidateSet('once', 'daily', 'weekly', 'two-weeks', 'monthly')]
-    [string]
-    $Interval = 'once',
+    [int]
+    $DaysInterval,
     [Parameter()]
     [datetime]
     $At = '0am',
@@ -154,16 +153,14 @@ function Register-PSScheduledTask {
   )
   if ($UsePowerShell) {
     $Command = 'pwsh -noni -nop -e ' + [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Command))
-    $Name = 'pwsh-' + $Name
   }
-  $Name = $Interval + '-' + $Name
+  $Name = 'pwsh-' + ($DaysInterval ? "${DaysInterval}d" : 'once') + '-' + $Name
   if ($IsWindows) {
-    $trigger = switch ($Interval) {
-      'once' { New-ScheduledTaskTrigger -At $At -Once; break }
-      'daily' { New-ScheduledTaskTrigger -At $At -Daily; break }
-      'weekly' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday; break }
-      'two-weeks' { New-ScheduledTaskTrigger -At $At -Weekly -DaysOfWeek Monday -WeeksInterval 2; break }
-      'monthly' { New-ScheduledTaskTrigger -At $At -Daily -DaysInterval 15; break }
+    $trigger = if ($DaysInterval) {
+      New-ScheduledTaskTrigger -At $At -Daily -DaysInterval $DaysInterval
+    }
+    else {
+      New-ScheduledTaskTrigger -At $At -Once
     }
     # HACK: no show cmd window
     $action = New-ScheduledTaskAction -Execute (Get-Command uvw -Type Application -TotalCount 1).Source -Argument "run -- $Command" -WorkingDirectory $WorkingDirectory
@@ -173,13 +170,6 @@ function Register-PSScheduledTask {
   elseif ($IsLinux) {
     if (!$Force -and (systemctl show @(if (!$AsAdmin) { '--user' }) $Name -p ExecStart)) {
       return Write-Error "Task $Name already exists."
-    }
-    $date, $acc = switch ($Interval) {
-      'once' { $At.ToString('yyyy-MM-dd'), '1m'; break }
-      'daily' { '*-*-*', '1d'; break }
-      'weekly' { 'Mon *-*-*', '3d'; break }
-      'two-weeks' { '*-*-1,16', '7d'; break }
-      'monthly' { '*-*-01', '14d'; break }
     }
     $service = @"
 [Unit]
@@ -205,9 +195,10 @@ WantedBy=$($Graphical ? 'graphical.target' : 'multi-user.target')" : '')
 Description=PowerShell $Name task timer
 
 [Timer]
-OnCalendar=$date $($At.ToString('HH:mm:ss'))
+OnCalendar=$($DaysInterval -eq 1 ? '*-*-*' : $At.ToString('yyyy-MM-dd')) $($At.ToString('HH:mm:ss'))
+OnUnitActiveSec=$($DaysInterval -le 1 ? [int]::MaxValue : $DaysInterval)d
 Persistent=$($Persistent.ToString().ToLowerInvariant())
-AccuracySec=$($Persistent ? $acc : '1m')
+AccuracySec=$($Persistent ? [System.Math]::Floor($DaysInterval * 12) : 0)h
 
 [Install]
 WantedBy=timers.target

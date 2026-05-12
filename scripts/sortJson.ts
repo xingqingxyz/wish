@@ -1,26 +1,19 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises'
 
-function sortObject(obj: object) {
-  return Object.entries(obj)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .reduce((o, [k, v]) => ((o[k] = sortAny(v)), o), {} as any) as object
-}
-
-function sortAny(value: any): any {
-  switch (typeof value) {
-    case 'string':
-    case 'number':
-    case 'boolean':
-      return value
-    case 'object':
-      if (value === null || Array.isArray(value)) {
-        return value
-      }
-      return sortObject(value)
-    default:
-      throw `unsupported type ${typeof value}`
+function sortObject(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(sortObject)
   }
+  if (typeof obj === 'object' && obj !== null) {
+    return Object.keys(obj)
+      .sort()
+      .reduce((sorted, key) => {
+        sorted[key] = sortObject(obj[key])
+        return sorted
+      }, {} as any)
+  }
+  return obj
 }
 
 await Promise.all(
@@ -30,7 +23,7 @@ await Promise.all(
       writeFile(
         file,
         JSON.stringify(
-          sortAny(JSON.parse(await readFile(file, 'utf-8'))),
+          sortObject(JSON.parse(await readFile(file, 'utf-8'))),
           undefined,
           2,
         ),

@@ -43,6 +43,12 @@
         "isDefault": true
       },
       "detail": "调试器生成的任务。"
+    },
+    {
+      "label": "Serve Rust Training",
+      "type": "shell",
+      "command": ["cargo", "xtask", "serve"],
+      "options": { "cwd": "${workspaceFolder}/../RustTraining" }
     }
   ],
   "version": "2.0.0"

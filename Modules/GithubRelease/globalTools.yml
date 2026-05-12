@@ -122,6 +122,7 @@ dnf:
   - msedit
   - ninja-build
   - openssl-devel
+  - java-25-openjdk-headless
   - pandoc
   - poppler-utils
   - python3-devel

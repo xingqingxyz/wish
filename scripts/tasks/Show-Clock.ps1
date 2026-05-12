@@ -26,10 +26,10 @@ else {
 }
 @('7:20-breakfast', '11:50-lunch', '17:20-dinner', '22:50-bed').ForEach{
   $clock, $dinner = $_.Split('-')
-  Register-PSScheduledTask "Show-Clock-$dinner" $scriptText.Replace('%clock%', $clock).Replace('%dinner%', $dinner) -Interval daily -At $clock -UsePowerShell -Graphical -Force
+  Register-PSScheduledTask "Show-Clock-$dinner" $scriptText.Replace('%clock%', $clock).Replace('%dinner%', $dinner) -DaysInterval 1 -At $clock -UsePowerShell -Graphical -Force
 }
 Register-PSScheduledTask 'Stop-Computer' {
   Send-Notify -Title 'Stop-Computer' -Severity Error 'Computer will be force stop after 3 minutes.'
   Start-Sleep 0:3
   Stop-Computer -Force
-} -Interval daily -At 23:27 -UsePowerShell -Force
+} -DaysInterval 1 -At 23:27 -UsePowerShell -Force

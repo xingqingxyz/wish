@@ -1,0 +1,9 @@
+{
+  "url": "https://dav.jianguoyun.com/dav",
+  "items": [
+    {
+      "source": "~/Documents/KeePassXC/password.kdbx",
+      "target": "/KeePassXC/password.kdbx"
+    }
+  ]
+}

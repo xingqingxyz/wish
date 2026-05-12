@@ -1,7 +1,8 @@
 __pycache__
 logs
 node_modules
-target
+*.egg-info
+/target
 /Modules/*/bin
 /Modules/*/obj
 
@@ -11,4 +12,5 @@ target
 *.log
 *.obj
 *.pdb
-test.*
+/.vscode/settings.json
+/test.*
