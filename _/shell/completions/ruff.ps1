@@ -99,7 +99,7 @@ Register-ArgumentCompleter -Native -CommandName ruff -ScriptBlock {
           '--target-version' { 'py37', 'py38', 'py39', 'py310', 'py311', 'py312', 'py313', 'py314'; break }
           '--extension' { 'ipy:ipynb'; break }
           default {
-            '--check', '--diff', '--extension', '--target-version', '--preview', '-h', '--help', '-n', '--no-cache', '--cache-dir', '--stdin-filename', '--exit-non-zero-on-format', '--respect-gitignore', '--exclude', '--force-exclude', '--line-length', '--range', '-v', '--verbose', '-q', '--quiet', '-s', '--silent', '--config', '--isolated'
+            '--check', '--diff', '--extension', '--target-version', '--preview', '-h', '--help', '-n', '--no-cache', '--cache-dir', '--stdin-filename', '--exit-non-zero-on-format', '--respect-gitignore', '--exclude', '--force-exclude', '--line-length', '--range', '-v', '--verbose', '-q', '--quiet', '-s', '--silent', '--config', '--isolated', '--output-format=concise', '--output-format=full', '--output-format=json', '--output-format=json-lines', '--output-format=junit', '--output-format=grouped', '--output-format=github', '--output-format=gitlab', '--output-format=pylint', '--output-format=rdjson', '--output-format=azure', '--output-format=sari'
             break
           }
         }

@@ -28,6 +28,8 @@ Update-Help -UICulture en-US -ea Ignore
 # gnu
 Invoke-RestMethod 'https://mirrors.ustc.edu.cn/gnu/gnu-keyring.gpg' -OutFile Temp:/gnu-keyring.gpg
 gpg --import (Convert-Path Temp:/gnu-keyring.gpg)
+# oven-sh/bun
+gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys F3DCC08A8572C0749B3E18888EAB4D40A7B22B59
 # xingqingxyz
 gpg --import $PSScriptRoot/data/pubkey.asc
 #endregion

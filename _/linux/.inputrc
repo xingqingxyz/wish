@@ -5,9 +5,10 @@ $if mode=emacs
 TAB: menu-complete
 C-B: backward-word
 C-F: forward-word
-C-H: backward-kill-word
+C-H: backward-delete-char
 C-P: history-search-backward
 C-N: history-search-forward
+C-W: backward-kill-word
 C-DEL: kill-word
 C-SPACE: possible-completions
 $endif

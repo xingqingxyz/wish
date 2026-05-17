@@ -54,10 +54,10 @@ Register-ArgumentCompleter -Native -CommandName bun -ScriptBlock {
   @(switch ($command) {
       '' {
         if ($wordToComplete.StartsWith('-')) {
-          '--watch', '--hot', '--no-clear-screen', '--smol', '-r', '--preload', '--inspect', '--inspect-wait', '--inspect-brk', '--if-present', '--no-install', '--install', '-e', '--eval', '--print', '--prefer-offline', '--prefer-latest', '-p', '--port', '--conditions', '--fetch-preconnect', '--max-http-header-size', '--silent', '-v', '--version', '--revision', '--filter', '-b', '--bun', '--shell', '--env-file', '--cwd', '-c', '--config', '-h', '--help'
+          '-r', '--recursive', '--watch', '--hot', '--no-clear-screen', '--smol', '-r', '--preload=', '--require=', '--import=', '--inspect=', '--inspect-wait=', '--inspect-brk=', '--cpu-prof', '--cpu-prof-name=', '--cpu-prof-dir=', '--cpu-prof-md', '--cpu-prof-interval=', '--heap-prof', '--heap-prof-name=', '--heap-prof-dir=', '--heap-prof-md', '--if-present', '--no-install', '--install=', '-i', '-e', '--eval=', '-p', '--print=', '--prefer-offline', '--prefer-latest', '--port=', '--conditions=', '--fetch-preconnect=', '--max-http-header-size=', '--dns-result-order=', '--expose-gc', '--no-deprecation', '--throw-deprecation', '--title=', '--zero-fill-buffers', '--use-system-ca', '--use-openssl-ca', '--use-bundled-ca', '--redis-preconnect', '--sql-preconnect', '--no-addons', '--unhandled-rejections=', '--console-depth=', '--user-agent=', '--cron-title=', '--cron-period=', '--silent', '--elide-lines=', '-v', '--version', '--revision', '-F', '--filter=', '-b', '--bun', '--shell=', '--workspaces', '--parallel', '--sequential', '--no-exit-on-error', '--env-file=', '--no-env-file', '--cwd=', '-c', '--config=', '-h', '--help'
         }
         elseif ($prev.StartsWith('bun')) {
-          'a', 'add', 'build', 'create', 'exec', 'i', 'init', 'install', 'link', 'outdated', 'patch', 'pm', 'publish', 'remove', 'repl', 'rm', 'run', 'test', 'unlink', 'update', 'upgrade', 'x'
+          'a', 'add', 'build', 'create', 'exec', 'i', 'init', 'install', 'link', 'outdated', 'patch', 'pm', 'publish', 'remove', 'repl', 'rm', 'run', 'test', 'unlink', 'update', 'upgrade', 'x', 'feedback'
         }
         break
       }

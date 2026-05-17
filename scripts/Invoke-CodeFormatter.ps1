@@ -67,9 +67,9 @@ function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) 
       break
     }
     '^\.(?:js|cjs|mjs|jsx|tsx|ts|cts|mts|json|jsonc|json5|yml|yaml|htm|html|xhtml|shtml|vue|gql|graphql|css|scss|sass|less|hbs|handlebars|md|markdown|toml)$' {
-      $ags = $Force ? '--ignore-path=', '--with-node-modules' : @()
+      $ags = ($Force -or !$Inplace) ? '--ignore-path=', '--with-node-modules' : @()
       if ($Inplace) {
-        { oxfmt --write $ags `-- $args }
+        { try { oxfmt --write $ags `-- $args } catch { return } }
       }
       elseif ($Stdin) {
         { $input | oxfmt $ags --stdin-filepath=$args }
@@ -81,7 +81,7 @@ function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) 
     }
     '^\.(?:ps1|psd1|psm1)$' {
       if ($Inplace) {
-        { $args.ForEach{ PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $_) -Settings $env:WISH_ROOT/CodeFormatting.psd1 | Out-File -NoNewline $_ } }
+        { $args.ForEach{ Out-File -NoNewline -LiteralPath $_ -InputObject (PSScriptAnalyzer\Invoke-Formatter (Get-Content -Raw -LiteralPath $_) -Settings $env:WISH_ROOT/CodeFormatting.psd1) } }
       }
       elseif ($Stdin) {
         { PSScriptAnalyzer\Invoke-Formatter (@($input) -join "`n") -Settings $env:WISH_ROOT/CodeFormatting.psd1 }
@@ -117,13 +117,14 @@ function Get-CodeFormatParser ([string]$Path, [switch]$Inplace, [switch]$Stdin) 
     }
     '^\.(?:sh|bash|zsh|ash)$' {
       if ($Inplace) {
-        { shfmt -i 2 -bn -ci -sr `-- $args }
+        $ags = @(if ($Force) { '--apply-ignore' })
+        { shfmt -i 2 -bn -ci -sr -s -w $ags `-- $args }
       }
       elseif ($Stdin) {
-        { $input | shfmt -i 2 -bn -ci -sr --filename $args }
+        { $input | shfmt -i 2 -bn -ci -sr -s --filename $args }
       }
       else {
-        { $args.ForEach{ Get-Content -Raw -LiteralPath $_ | shfmt -i 2 -bn -ci -sr --filename $_ } }
+        { shfmt -i 2 -bn -ci -sr -s `-- $args }
       }
       break
     }

@@ -17,6 +17,10 @@ get_theme() {
       config_file="$CONFIG_DIR/bat/config"
       sed -En "s/^--theme-$2=\"(.+)\"$/\1/p" "$config_file"
       ;;
+    delta)
+      config_file="$HOME/.gitconfig"
+      sed -En "s/^syntax-theme-$2 = (.+)$/\1/p" "$config_file"
+      ;;
     windows_terminal)
       config_file="$LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
       sed -En "s/^ {12}\"colorScheme\": \"(.+)\",?$/\1/p" "$config_file"
@@ -32,11 +36,15 @@ set_theme() {
   case "$1" in
     alacritty)
       config_file="$CONFIG_DIR/alacritty/alacritty.toml"
-      sed -Ei --follow-symlinks "s|^import = \[\".+\"\](\r?)$|import = \[\"alacritty-theme/themes/$2.toml\"\]\1|" "$config_file"
+      sed -Ei --follow-symlinks "s|^import = \[\".+\"\](\r?)\$|import = \[\"alacritty-theme/themes/$2.toml\"\]\1|" "$config_file"
       ;;
     bat)
       config_file="$CONFIG_DIR/bat/config"
-      sed -Ei --follow-symlinks "s/^--theme-$3=.+$/--theme-$3=\"$2\"/" "$config_file"
+      sed -Ei --follow-symlinks "s/^(--theme-$3=).+\$/\1\"$2\"/" "$config_file"
+      ;;
+    delta)
+      config_file="$HOME/.gitconfig"
+      sed -Ei "s/^(syntax-theme = ).+\$/\1$2/" "$config_file"
       ;;
     windows_terminal)
       config_file="$LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
@@ -57,6 +65,9 @@ preview_theme() {
       ;;
     bat)
       bat --theme="$2" -plsh --color=always ~/.bashrc
+      ;;
+    delta)
+      delta --syntax-theme="$2" ~/.bashrc ~/.bash_profile
       ;;
     *) return 1 ;;
   esac

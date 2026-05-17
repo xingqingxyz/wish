@@ -1,4 +1,4 @@
-Register-ArgumentCompleter -Native -CommandName npx, pnpx, bunx -ScriptBlock {
+Register-ArgumentCompleter -Native -CommandName npx, pnx, pnpx, bunx -ScriptBlock {
   param ([string]$wordToComplete, [System.Management.Automation.Language.CommandAst]$commandAst, [int]$cursorPosition)
   if ($commandAst.CommandElements.Count -eq 1 -or
     ($commandAst.CommandElements.Count -eq 2 -and

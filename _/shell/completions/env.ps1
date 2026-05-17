@@ -29,11 +29,10 @@ Register-ArgumentCompleter -Native -CommandName env -ScriptBlock {
     return & (Get-ArgumentCompleter $commandName) $wordToComplete $commandAst $cursorPosition
   }
   if ($wordToComplete.StartsWith('-')) {
-    return @('-a', '--argv0=', '-i', '--ignore-environment', '-0', '--null', '-u', '--unset=', '-C', '--chdir=', '-S', '--split-string=', '--block-signal', '--block-signal=', '--default-signal', '--default-signal=', '--ignore-signal', '--ignore-signal=', '--list-signal-handling', '-v', '--debug', '--help', '--version').Where{ $_ -like "$wordToComplete*" }
+    return ('-a', '--argv0=', '-i', '--ignore-environment', '-0', '--null', '-u', '--unset=', '-C', '--chdir=', '-S', '--split-string=', '--block-signal', '--block-signal=', '--default-signal', '--default-signal=', '--ignore-signal', '--ignore-signal=', '--list-signal-handling', '-v', '--debug', '--help', '--version').Where{ $_ -like "$wordToComplete*" }
   }
   if ($wordToComplete -cmatch '^\w+=?') {
-    Get-Item Env:$($wordToComplete.TrimEnd('='))* -ea Ignore | ForEach-Object { [System.Management.Automation.CompletionResult]::new($_.Name + '=') }
+    (Get-Item Env:$($wordToComplete.TrimEnd('='))*).ForEach{ $_.Name + '=' }
   }
-  @([System.Management.Automation.CompletionCompleters]::CompleteCommand($wordToComplete)) ??
-  @([System.Management.Automation.CompletionCompleters]::CompleteFilename($wordToComplete))
+  (Get-Command $wordToComplete* -CommandType Application).Name
 }

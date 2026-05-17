@@ -1,0 +1,38 @@
+version: '2'
+run:
+  allow-parallel-runners: true
+linters:
+  default: all
+  settings:
+    cyclop:
+      max-complexity: 20
+    funlen:
+      lines: 300
+  exclusions:
+    warn-unused: true
+    rules:
+      - path: .
+        linters:
+          - depguard
+          - err113
+          - exhaustruct
+          - gochecknoglobals
+          - gochecknoinits
+          - goconst
+          - gomodguard
+          - gosec
+          - ireturn
+          - lll
+          - mnd
+          - noctx
+          - revive
+          - wrapcheck
+          - wsl
+      - path: .
+        source: '^\s*defer\s+'
+        linters:
+          - errcheck
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: true

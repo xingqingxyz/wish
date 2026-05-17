@@ -31,7 +31,7 @@ function e.jq {
 #endregion
 
 # commands
-Register-EditorCommand -Name 'hello' -DisplayName 'Hello World' -ScriptBlock {
+Register-EditorCommand -Name 'hello' -DisplayName 'Hello World' -SuppressOutput -ScriptBlock {
   [CmdletBinding()]
   param (
     [Parameter()]

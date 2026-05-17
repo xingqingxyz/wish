@@ -281,37 +281,12 @@ function uev {
   }
 }
 
-function npm {
-  $root = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
-  $cmd = $(do {
-      $items = Split-Path -Resolve -Leaf $root/pnpm-lock.yaml, $root/bun.lock?, $root/yarn.lock, $root/deno.json -ea Ignore
-      if ($items) {
-        $items[0].Split('-.'.ToCharArray(), 2)[0]
-        break
-      }
-      $root = [System.IO.Path]::GetDirectoryName($root)
-    } while (![System.IO.Path]::IsPathRooted($root))) ?? 'npm'
-  $cmd = (Get-Command $cmd -CommandType Application -TotalCount 1).Source
-  $ags = $args.ForEach{ $_.Where{ $null -ne $_ } }
-  if ($MyInvocation.ExpectingInput) {
-    Write-Debug "| $cmd $ags"
-    $input | & $cmd $ags
-  }
-  else {
-    Write-Debug "$cmd $ags"
-    & $cmd $ags
-  }
-  if ($LASTEXITCODE) {
-    throw "npm exit code $LASTEXITCODE"
-  }
-}
-
 function npx {
   $root = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
   $npm = $(do {
-      $items = Split-Path -Resolve -Leaf $root/pnpm-lock.yaml, $root/bun.lock?, $root/yarn.lock, $root/deno.json -ea Ignore
-      if ($items) {
-        $items[0].Split('-.'.ToCharArray(), 2)[0]
+      $lockFile = Split-Path -Resolve -Leaf $root/pnpm-lock.yaml, $root/bun.lock?, $root/yarn.lock, $root/deno.json -ea Ignore | Select-Object -First 1
+      if ($lockFile) {
+        $lockFile.Split('-.'.ToCharArray(), 2)[0]
         break
       }
       $root = [System.IO.Path]::GetDirectoryName($root)

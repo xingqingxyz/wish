@@ -16,9 +16,12 @@ func main() {
 	cmd.Env = append(os.Environ(), "Path="+path)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
+
 	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); errors.Is(err, &exec.ExitError{}) {
+	err := cmd.Run()
+	if errors.Is(err, &exec.ExitError{}) {
 		panic(err)
 	}
+
 	os.Exit(cmd.ProcessState.ExitCode())
 }

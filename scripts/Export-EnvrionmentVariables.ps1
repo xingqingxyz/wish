@@ -95,7 +95,7 @@ if ($IsWindows) {
   $Path = @'
 %USERPROFILE%\.cargo\bin
 %USERPROFILE%\go\bin
-%USERPROFILE%\.bun\bin
+%LOCALAPPDATA%\pnpm\bin
 %USERPROFILE%\.dotnet\tools
 '@.Split("`n") + (Get-Item -LiteralPath HKCU:\Environment).GetValue('Path', $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames).Split(';') | Select-Object -Unique | Join-String -Separator ';'
   Set-ItemProperty -LiteralPath HKCU:\Environment Path $Path -Type ExpandString
@@ -108,7 +108,7 @@ elseif ($IsLinux) {
 $HOME/.local/bin
 $HOME/.cargo/bin
 $HOME/go/bin
-$HOME/.bun/bin
+$HOME/.local/share/pnpm/bin
 $HOME/.dotnet/tools
 $HOME/.local/share/powershell/Scripts
 /usr/local/share/powershell/Scripts

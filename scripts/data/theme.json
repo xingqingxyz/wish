@@ -2,11 +2,13 @@
   "dark": {
     "alacritty": "dark_plus",
     "bat": "Catppuccin Frappe",
+    "delta": "Dracula",
     "windows_terminal": "Dark+"
   },
   "light": {
     "alacritty": "alabaster",
     "bat": "GitHub",
+    "delta": "GitHub",
     "windows_terminal": "Tango Light"
   }
 }

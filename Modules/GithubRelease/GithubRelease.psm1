@@ -226,8 +226,17 @@ function Update-Software {
       continue
     }
     pnpm {
+      if (!(Get-Command pnpm -CommandType Application -TotalCount 1 -ea Ignore)) {
+        npm add -g "--prefix=$dataDir" pnpm
+      }
       if ($Global) {
-        Start-Process pnpm self-update -WorkingDirectory $HOME -NoNewWindow -Wait
+        Push-Location -LiteralPath $HOME
+        try {
+          pnpm self-update
+        }
+        finally {
+          Pop-Location
+        }
         pnpm up -g --latest
         if ($Force -and $pkgs) {
           pnpm add -g $pkgs
@@ -703,8 +712,9 @@ function Install-Release {
       }
       $base = 'bun-{0}-{1}' -f $go.os, $arch
       $file = $base + '.zip'
-      Invoke-ReleaseDownload $Meta $file, SHASUMS256.txt
-      Assert-FileHash $file SHASUMS256.txt
+      Invoke-ReleaseDownload $Meta $file, SHASUMS256.txt.asc
+      gpg --verify $buildDir/SHASUMS256.txt.asc
+      Assert-FileHash $file SHASUMS256.txt.asc
       Expand-Archive -LiteralPath $buildDir/$file $buildDir -Force
       Move-Item -LiteralPath $buildDir/$base/bun$exe $binDir -Force
       $null = New-Item -ItemType SymbolicLink -Force -Target bun$exe $binDir/bunx$exe
@@ -1180,6 +1190,8 @@ StartupWMClass=localsend_app
         }
         default { throw [System.NotImplementedException]::new() }
       }
+      # update help
+      pwsh -nop -c Update-Help -UICulture en-US -ea Ignore
       break
     }
     rg {
@@ -1370,16 +1382,23 @@ StartupWMClass=localsend_app
     }
     zed {
       $file = switch ($true) {
-        $IsLinux { 'Zed-linux-{0}.tar.gz' -f $rust.arch; break }
+        $IsLinux { 'zed-linux-{0}.tar.gz' -f $rust.arch; break }
         $IsMacOS { 'Zed-{0}.dmg' -f $rust.arch; break }
         $IsWindows { 'Zed-{0}.exe' -f $rust.arch; break }
         default { throw [System.NotImplementedException]::new() }
       }
       Invoke-ReleaseDownload $Meta $file
       switch ($true) {
-        $IsLinux { tar -xf $buildDir/$file -C $binDir --strip-components=1; break }
+        $IsLinux {
+          Remove-Item -LiteralPath $dataDir/zed -Recurse -Force
+          tar -xf $buildDir/$file -C (New-Item -ItemType Directory $dataDir/zed -Force) --strip-components=1
+          $null = New-Item -ItemType SymbolicLink -Force -Target $dataDir/zed/bin/zed $binDir/zed
+          Move-Item -LiteralPath $dataDir/zed/share $dataDir/share -Force
+          update-desktop-database $dataDir/applications
+          break
+        }
         $IsMacOS { sudo installer -pkg $buildDir/$file -dumplog > Temp:/$file.log; break }
-        $IsWindows { Move-Item -LiteralPath $buildDir/$file $binDir/Zed.exe -Force; break }
+        $IsWindows { Move-Item -LiteralPath $buildDir/$file $binDir/zed.exe -Force; break }
       }
       break
     }

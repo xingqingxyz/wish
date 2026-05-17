@@ -35,6 +35,7 @@ var cmd = &cobra.Command{
 	Args:    cobra.MinimumNArgs(0),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		isOutTty := term.IsTerminal(int(os.Stdout.Fd()))
+
 		switch color {
 		case "always":
 		case "auto":
@@ -46,6 +47,7 @@ var cmd = &cobra.Command{
 		default:
 			return fmt.Errorf("glow: unknown color: %s", color)
 		}
+
 		switch style {
 		case "auto":
 			if lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
@@ -55,16 +57,19 @@ var cmd = &cobra.Command{
 			}
 		case "ascii", "dark", "light", "pink", "notty", "dracula", "tokyo-night":
 		default:
-			if info, err := os.Stat(style); err != nil || info.IsDir() {
+			info, err := os.Stat(style)
+			if err != nil || info.IsDir() {
 				return fmt.Errorf("glow: invalid style path: %s", style)
 			}
 		}
+
 		switch pager {
 		case "auto":
 			if pager = os.Getenv("PAGER"); pager == "" {
 				pager = "less"
 			}
 		}
+
 		switch paging {
 		case "auto":
 			if isOutTty {
@@ -73,6 +78,7 @@ var cmd = &cobra.Command{
 				paging = "never"
 			}
 		}
+
 		return nil
 	},
 	RunE: run,
@@ -106,19 +112,25 @@ func getWriter() (*os.File, *exec.Cmd) {
 	if paging != "always" {
 		return os.Stdout, nil
 	}
-	r, w, err := os.Pipe()
+
+	reader, writer, err := os.Pipe()
 	if err != nil {
 		return os.Stdout, nil
 	}
+
 	pagerArgs := strings.Fields(pager)
 	pagerCmd := exec.Command(pagerArgs[0], pagerArgs[1:]...)
-	pagerCmd.Stdin = r
+	pagerCmd.Stdin = reader
 	pagerCmd.Stdout = os.Stdout
+
 	pagerCmd.Stderr = os.Stderr
-	if err := pagerCmd.Start(); err != nil {
+
+	err = pagerCmd.Start()
+	if err != nil {
 		return os.Stdout, nil
 	}
-	return w, pagerCmd
+
+	return writer, pagerCmd
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -131,52 +143,66 @@ func run(cmd *cobra.Command, args []string) error {
 	if baseUrl != "" {
 		opts = append(opts, glamour.WithBaseURL(baseUrl))
 	}
+
 	if preserveNewLines {
 		opts = append(opts, glamour.WithPreservedNewLines())
 	}
-	r, err := glamour.NewTermRenderer(opts...)
+
+	render, err := glamour.NewTermRenderer(opts...)
 	if err != nil {
 		return err
 	}
+
 	if len(args) == 0 {
 		args = []string{"-"}
 	}
+
 	writer, pagerCmd := getWriter()
 	pagerEch := make(chan error, 1)
+
+	defer func() {
+		_ = writer.Close()
+
+		if pagerCmd != nil {
+			<-pagerEch
+		}
+	}()
+
 	if pagerCmd != nil {
 		go func() {
 			pagerEch <- pagerCmd.Wait()
 		}()
 	}
-	defer func() {
-		_ = writer.Close()
-		if pagerCmd != nil {
-			<-pagerEch
-		}
-	}()
+
+	var bytes []byte
+
 	for _, arg := range args {
-		var bytes []byte
-		var err error
 		if arg == "-" {
 			bytes, err = io.ReadAll(os.Stdin)
 		} else {
 			bytes, err = os.ReadFile(arg)
 		}
+
 		if err != nil {
 			return err
 		}
-		bytes, err = r.RenderBytes(bytes)
+
+		bytes, err = render.RenderBytes(bytes)
 		if err != nil {
 			return err
 		}
+
 		ech := make(chan error)
+
 		go func() {
 			_, err := writer.Write(bytes)
 			ech <- err
 		}()
+
 		select {
 		case err = <-pagerEch:
 			pagerEch <- nil
+
 			return err
 		case err = <-ech:
 			if err != nil {
@@ -184,6 +210,7 @@ func run(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+
 	return nil
 }
 

@@ -1,6 +1,7 @@
 @echo off
 REM get the script name without path
-for %%I in ("%~n0") do set "name=%%~I"
+for %%i in ("%~n0") do set "name=%%~i"
+for /f "delims=" %%i in ('pnpm bin -g') do set "cmd=%%i\%name%"
 setlocal enabledelayedexpansion
 
 REM copy all args into args list (simulated via %*)
@@ -25,9 +26,9 @@ set "args=%args% -y"
 
 :after_prompt
 REM run the command and pipe through glow
-"%USERPROFILE%\.bun\bin\%name%" %args% | glow
+"%cmd%" %args% | glow
 exit /b
 
 :end_parse
 REM final exec without glow when loop finishes with single arg
-"%USERPROFILE%\.bun\bin\%name%" %args%
+"%cmd%" %args%

@@ -38,12 +38,17 @@ if ($Init) {
   Split-Path -Resolve -Leaf cmd/* | ForEach-Object -Parallel {
     go build -trimpath -ldflags '-w -s' -o $Using:binDir/$($_.Name)$exe ./cmd/$_
   } -ThrottleLimit ($env:NUMBER_OF_PROCESSORS ?? 8)
+  return
 }
 $PSStyle.OutputRendering = 'PlainText'
 Write-Host "$PSCommandPath -$($PSBoundParameters.Keys)"
 if ($PreCommit) {
+  cargo check
+  golangci-lint run
+  # FIXME: pwsh % -Parallel exits when first cmd fails, and
+  # PSScriptAnalyzer\Invoke-Formatter doesn't supports parallel
   git diff --cached --name-only --diff-filter=ACMRT | Tee-Object -Variable files | ForEach-Object {
-    & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath $_ -Inplace -ea Ignore
+    & ./scripts/Invoke-CodeFormatter.ps1 -LiteralPath $_ -Inplace
   }
   git add $files
 }

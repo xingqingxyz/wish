@@ -10,6 +10,7 @@ apt:
   - cosign
   - curl
   - dconf-editor
+  - dict
   - docker.io
   - dotnet-sdk-10.0
   - fcitx5
@@ -77,14 +78,7 @@ brew-cask:
   - microsoft-edge
   - vs-code
   - xcode
-bun:
-  - '@qwen-code/qwen-code'
-  - '@tencent-ai/codebuddy-code'
-  - '@vscode/vsce'
-  - generator-code
-  - oxfmt
-  - pnpm
-  - yo
+bun: []
 cargo:
   - cargo-update
 code: []
@@ -98,7 +92,7 @@ dnf:
   - cmake
   - code
   - dconf-editor
-  - dictd
+  - dict
   - docker-cli
   - dotnet-sdk-10.0
   - fcitx5-chinese-addons
@@ -223,7 +217,13 @@ macos:
   - wasm-pack
   - yq
 npm: []
-pnpm: []
+pnpm:
+  - '@tencent-ai/codebuddy-code'
+  - '@vscode/vsce'
+  - generator-code
+  - oxfmt
+  - yarn
+  - yo
 ps1: []
 psm1:
   - Pester

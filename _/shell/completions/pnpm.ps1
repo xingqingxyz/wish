@@ -1,6 +1,6 @@
 using namespace System.Management.Automation.Language
 
-Register-ArgumentCompleter -Native -CommandName pnpm -ScriptBlock {
+Register-ArgumentCompleter -Native -CommandName pn, pnpm -ScriptBlock {
   param ([string]$wordToComplete, [CommandAst]$commandAst, [int]$cursorPosition)
   [string[]]$commands = foreach ($i in $commandAst.CommandElements) {
     if ($i.Extent.StartOffset -eq $commandAst.Extent.StartOffset -or $i.Extent.EndOffset -eq $cursorPosition) {
@@ -35,7 +35,7 @@ Register-ArgumentCompleter -Native -CommandName pnpm -ScriptBlock {
     if ($wordToComplete.StartsWith('-')) {
       return @('-r', '-c').Where{ $_ -like "$wordToComplete*" }
     }
-    return (Split-Path -Resolve -LeafBase node_modules/.bin/* -ea Ignore | Sort-Object -Unique | Where-Object { $_ -like "$wordToComplete*" }) ?? [System.Management.Automation.CompletionCompleters]::CompleteCommand($wordToComplete, '', [System.Management.Automation.CommandTypes]::Application)
+    return (Split-Path -Resolve -LeafBase node_modules/.bin/* -ea Ignore | Sort-Object -Unique | Where-Object { $_ -like "$wordToComplete*" }) ?? [System.Management.Automation.CompletionCompleters]::CompleteCommand($wordToComplete, [System.Management.Automation.CommandTypes]::Application)
   }
   if ($command.StartsWith('exec ')) {
     [string]$line = $commandAst
@@ -62,7 +62,7 @@ Register-ArgumentCompleter -Native -CommandName pnpm -ScriptBlock {
           '-r', '--recursive'
         }
         else {
-          'add', 'approve-builds', 'audit', 'cat-file', 'cat-index', 'exec', 'find-hash', 'help', 'i', 'import', 'install-test', 'install', 'it', 'licenses', 'link', 'list', 'ln', 'ls', 'outdated', 'pack', 'prune', 'publish', 'rb', 'rebuild', 'remove', 'rm', 'root', 'run', 'run-script', 'self-update', 'start', 'store', 't', 'test', 'unlink', 'up', 'update'
+          'i', 'it', 'ln', 'rb', 'rm', 'up', 'ls', 't', 'c', 'rt', 'add', 'clean', 'dedupe', 'fetch', 'import', 'install', 'install-test', 'link', 'prune', 'rebuild', 'remove', 'unlink', 'update', 'patch', 'patch-commit', 'patch-remove', 'audit', 'licenses', 'list', 'outdated', 'why', 'approve-builds', 'create', 'dlx', 'exec', 'ignored-builds', 'run', 'start', 'test', 'bin', 'config', 'deploy', 'init', 'pack', 'publish', 'root', 'env', 'runtime', 'self-update', 'cat-file', 'cat-index', 'find-hash', 'store', 'cache'
           break
         }
         break
@@ -86,6 +86,13 @@ Register-ArgumentCompleter -Native -CommandName pnpm -ScriptBlock {
           '--audit-level', '-D', '--dev', '--fix', '--ignore-registry-errors', '--json', '--no-optional', '-P', '--prod'
           break
         }
+        break
+      }
+      'cache' {
+        if ($wordToComplete.StartsWith('-')) {
+          break
+        }
+        'delete', 'list', 'list-registries', 'view'
         break
       }
       'licenses' {

@@ -34,6 +34,23 @@ if [[ $TERM_PROGRAM != vscode* ]]; then
   fi
 fi
 
+# load
+case "$OSTYPE" in
+  msys | cygwin)
+    # env
+    if [[ :$PATH: != *:/usr/bin:* ]]; then
+      PATH=/usr/bin:$PATH
+    fi
+    if [[ :$PATH: != *:/mingw64/bin:* ]]; then
+      PATH=/mingw64/bin:$PATH
+    fi
+    alias ls='ls --color=auto'
+    shopt -s extglob
+    ;;
+esac
+REPLY=$(realpath -- "${BASH_SOURCE[0]}")
+eval "$(printf '. %q\n' "${REPLY%/*}"/*.sh)"
+
 # command-not-found
 command_not_found_handle() {
   # check because c-n-f could've been removed in the meantime
@@ -131,19 +148,3 @@ e() {
 k() {
   bat -plsh
 }
-
-case "$OSTYPE" in
-  msys | cygwin)
-    # env
-    if [[ :$PATH: != *:/usr/bin:* ]]; then
-      PATH=/usr/bin:$PATH
-    fi
-    if [[ :$PATH: != *:/mingw64/bin:* ]]; then
-      PATH=/mingw64/bin:$PATH
-    fi
-    alias ls='ls --color=auto'
-    shopt -s extglob
-    ;;
-esac
-REPLY=$(realpath -- "${BASH_SOURCE[0]}")
-eval "$(printf '. %q\n' "${REPLY%/*}"/*.sh)"
